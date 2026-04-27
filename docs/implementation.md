@@ -29,9 +29,9 @@
 ---
 
 ## Step 4 — Checker + Notifier
-- [ ] `PriceChecker` — absolute OR percentage threshold logic
-- [ ] `Notifier` interface
-- [ ] `SlackNotifier` — HTTP POST to webhook URL, read from env var
+- [x] `PriceChecker` — absolute OR percentage threshold logic
+- [x] `Notifier` interface
+- [x] `SlackNotifier` — HTTP POST to webhook URL, read from env var
 
 ---
 
