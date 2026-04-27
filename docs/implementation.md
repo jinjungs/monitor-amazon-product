@@ -36,10 +36,10 @@
 ---
 
 ## Step 5 — Scheduler
-- [ ] `ThreadPoolTaskExecutor` bean (configured from `application.yml`)
-- [ ] `@Scheduled` job — fetch active products, submit one task per product
-- [ ] Orchestrate: Scraper → Storage → Checker → Notifier per product
-- [ ] Enable `@EnableRetry`, `@EnableAsync`, `@EnableScheduling`
+- [x] `ThreadPoolTaskExecutor` bean (configured from `application.yml`)
+- [x] `@Scheduled` job — fetch active products, submit one task per product
+- [x] Orchestrate: Scraper → Storage → Checker → Notifier per product
+- [x] Enable `@EnableRetry`, `@EnableAsync`, `@EnableScheduling`
 
 ---
 
