@@ -54,11 +54,12 @@ One scraper failure does not block others — each product runs in its own threa
 
 ```sql
 CREATE TABLE products (
-    id        BIGSERIAL PRIMARY KEY,
-    url       TEXT UNIQUE NOT NULL,
-    name      TEXT,
-    active    BOOLEAN NOT NULL DEFAULT TRUE,
-    added_at  TIMESTAMP NOT NULL DEFAULT NOW()
+    id         BIGSERIAL PRIMARY KEY,
+    url        TEXT UNIQUE NOT NULL,
+    name       TEXT,
+    active     BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE price_checks (
@@ -68,12 +69,16 @@ CREATE TABLE price_checks (
     currency   VARCHAR(3) DEFAULT 'USD',
     status     VARCHAR(20) NOT NULL,  -- ok | error | unavailable
     error_msg  TEXT,
-    checked_at TIMESTAMP NOT NULL DEFAULT NOW()
+    checked_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_price_checks_product_checked
     ON price_checks(product_id, checked_at DESC);
 ```
+
+`created_at` / `updated_at` are managed automatically by Spring Data JPA Auditing (`BaseEntity` with `@CreatedDate` / `@LastModifiedDate`). `checked_at` on `price_checks` is the business timestamp — when the price was actually fetched.
 
 ---
 

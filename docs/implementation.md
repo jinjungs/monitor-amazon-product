@@ -11,12 +11,12 @@
 ---
 
 ## Step 2 — Storage Layer
-- [ ] `Product` JPA entity
-- [ ] `PriceCheck` JPA entity
-- [ ] `ProductRepository`
-- [ ] `PriceCheckRepository` (include query for last `status='ok'` price)
-- [ ] `schema.sql` for PostgreSQL (or Flyway migration)
-- [ ] H2 config for test profile (`application-test.yml`)
+- [x] `Product` JPA entity
+- [x] `PriceCheck` JPA entity
+- [x] `ProductRepository`
+- [x] `PriceCheckRepository` (include query for last `status='ok'` price)
+- [x] `schema.sql` for PostgreSQL (or Flyway migration)
+- [x] H2 config for test profile (`application-test.yml`)
 
 ---
 
