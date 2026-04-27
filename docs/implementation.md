@@ -21,10 +21,10 @@
 ---
 
 ## Step 3 — Scraper Layer
-- [ ] Define custom exceptions (`PriceParseException`, `CaptchaException`)
-- [ ] `AmazonScraper` — jsoup, parse `span.a-price-whole` + `span.a-price-fraction`
-- [ ] Apply `@Retryable` (retry on timeout / 5xx only, `noRetryFor` on parse/CAPTCHA exceptions)
-- [ ] Apply `@Recover` — record `status='error'` after retries exhausted
+- [x] Define custom exceptions (`PriceParseException`, `CaptchaException`)
+- [x] `AmazonScraper` — jsoup, parse `span.a-price-whole` + `span.a-price-fraction`
+- [x] Apply `@Retryable` (retry on timeout / 5xx only, `noRetryFor` on parse/CAPTCHA exceptions)
+- [x] Apply `@Recover` — record `status='error'` after retries exhausted
 
 ---
 
