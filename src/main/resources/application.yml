@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/pricedb
+    username: monitor
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  sql:
+    init:
+      mode: never
+
+monitor:
+  interval-ms: 3600000
+  thread-pool:
+    core-size: 3
+    max-size: 10
+  threshold:
+    absolute: 1.00
+    percentage: 2.0
+  slack:
+    webhook-url: ${SLACK_WEBHOOK_URL}
+
+logging:
+  level:
+    root: INFO
+    com.monitor: DEBUG

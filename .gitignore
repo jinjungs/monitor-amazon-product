@@ -1,0 +1,18 @@
+# Environment
+.env
+
+# Build
+target/
+*.jar
+*.war
+
+# Data
+data/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store

@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+  sql:
+    init:
+      mode: never
+
+monitor:
+  interval-ms: 3600000
+  thread-pool:
+    core-size: 2
+    max-size: 5
+  threshold:
+    absolute: 1.00
+    percentage: 2.0
+  slack:
+    webhook-url: http://localhost:9999/slack
