@@ -3,13 +3,13 @@
 ### Time Management
 
 - Target Time: 2–4 hours
-- 1 hour: Planning & Research
+- 2 hour: Planning & Research
   - Requirement deep dive
   - Clarify expectations and constraints
   - Decide architecture
-- 1 hour: Implementation
+- 30 minutes: Implementation
 - 1 hour: Testing
-- 1 hour: Make a document
+- 30 minutes: Make a document
 
 ### Language and tooling
 
@@ -19,8 +19,6 @@
 why?
 - I am familiar with Java and Spring Boot
 - Python has mature ecosystem for web scraping, but there's no limitation for using jsoup in this case.
-  - The key question is: does Amazon render the price server-side or via JavaScript?
-  - Answer: mostly server-side. Amazon renders prices in the initial HTML for SEO reasons — the price element is typically present in the raw HTML response. jsoup can parse it fine. This is the same situation Python's httpx + BeautifulSoup faces — they're both static HTML parsers.
 
 
 ### AI Agent
