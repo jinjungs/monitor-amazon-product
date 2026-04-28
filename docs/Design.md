@@ -12,12 +12,12 @@ Build a system that monitors a configurable set of Amazon product prices, persis
 
 | | Java + Spring Boot | Python + FastAPI/APScheduler |
 |---|---|---|
-| **Pros** | Preferred by the brief; familiar; `@Scheduled`, JPA, Retry all built-in | Mature scraping ecosystem; faster to prototype |
-| **Cons** | More boilerplate than Python | Weaker justification for scraping advantage (jsoup handles Amazon fine) |
+| **Pros** | Preferred by the brief; familiar; `@Scheduled`, JPA, Retry all built-in | Mature scraping ecosystem (requests, BeautifulSoup); faster to prototype |
+| **Cons** | More boilerplate than Python | Less justified here — Python's scraping advantage doesn't apply in this case |
 
-**Why Java:** The brief explicitly prefers Java, and the problem maps naturally to Spring primitives. jsoup parses Amazon's server-side rendered HTML just as well as Python's BeautifulSoup — there is no scraping limitation that would justify switching languages.
+**Why Java:** Two reasons. First, the brief explicitly prefers Java and it is the production stack. Second, Python's scraping ecosystem advantage does not apply here. Amazon renders prices server-side in the raw HTML — jsoup parses the same DOM that BeautifulSoup would. The key question was whether JavaScript execution was needed; it is not, so jsoup is fully sufficient. There is no scraping limitation that would justify choosing Python over a language we know better.
 
-**Tradeoff:** Python would have been faster to prototype under a strict time budget. Java produces a more defensible solution given the panel context.
+**Tradeoff:** Python would have been faster to prototype. Java is the right call given familiarity, the brief's preference, and the fact that the scraping gap between the two languages is zero for this specific use case.
 
 ---
 
