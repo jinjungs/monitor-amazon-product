@@ -11,6 +11,8 @@ import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
+import org.jsoup.HttpStatusException;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.SocketTimeoutException;
@@ -24,7 +26,7 @@ public class AmazonScraper {
 
     @Retryable(
             retryFor = {SocketTimeoutException.class, IOException.class},
-            noRetryFor = {PriceParseException.class, CaptchaException.class},
+            noRetryFor = {PriceParseException.class, CaptchaException.class, HttpStatusException.class},
             maxAttempts = 2,
             backoff = @Backoff(delay = 5000)
     )

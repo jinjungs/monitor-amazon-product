@@ -1,6 +1,6 @@
 # AI-NOTES
 
-Total issues caught: 2
+Total issues caught: 3
 
 ---
 
@@ -59,3 +59,27 @@ public void deleteProduct(Long id) {
 ```
 
 An alternative would be `ON DELETE CASCADE` on the FK at the schema level, but explicit deletion in the service layer makes the behavior visible and testable.
+
+---
+
+## #3 — 4xx HTTP errors being retried unnecessarily
+
+### What Claude did
+
+The `@Retryable` config specified `retryFor = {SocketTimeoutException.class, IOException.class}`. jsoup's `HttpStatusException` (thrown on 4xx/5xx responses) extends `IOException`, so 404s were being retried twice with a 5-second delay — adding 10 seconds of unnecessary wait before failing.
+
+### Why it was wrong
+
+A 404 means the resource does not exist. Retrying will not change the outcome. Only transient errors (timeouts, 5xx) are worth retrying. 4xx errors should fail immediately.
+
+### How it was caught
+
+A 404 error on a product URL showed `durationMs=5488` in the logs — matching exactly 2 attempts × ~2.7s each plus the 5s backoff, confirming the retry was firing.
+
+### The fix
+
+Add `HttpStatusException.class` to `noRetryFor` so all HTTP status errors bypass the retry logic entirely.
+
+```java
+noRetryFor = {PriceParseException.class, CaptchaException.class, HttpStatusException.class}
+```
