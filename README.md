@@ -8,7 +8,10 @@ Monitors Amazon product prices and sends a Slack notification when a price drop 
 - Docker Desktop (includes Docker Compose v2)
 
 > **Install Docker Desktop (Mac):**
-> Download from [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/) → Install → Launch the app → wait for the whale icon in the menu bar to turn solid.
+> ```bash
+> brew install --cask docker
+> ```
+> Then open the Docker app from Applications once — the daemon must be running before using `docker` commands.
 > Verify: `docker --version`
 
 ## Setup
