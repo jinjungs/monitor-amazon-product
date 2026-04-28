@@ -4,7 +4,7 @@ Total issues caught: 5
 
 ---
 
-## #1 — Missing initial price fetch on product registration
+## #1 — No proactive initial price fetch on product registration
 
 ### What Claude did
 
@@ -12,13 +12,15 @@ When designing the product registration flow, Claude implemented `addProduct()` 
 
 The scheduled job would pick up the new product on the next tick (up to 1 hour later). This meant a freshly added product showed `-` for price and an empty dashboard chart until the first scheduled run.
 
-### Why it was wrong
+### Why it matters
 
-The dashboard is useless for a new product until the first price check runs. A user adds a product and immediately opens the dashboard expecting to see something — they see nothing. This is a poor UX and also means there's no baseline price to compare against for the first scheduled run.
+The requirement never explicitly stated "fetch price on registration." However, a thoughtful engineer would anticipate this UX gap: a user adds a product and immediately checks the dashboard expecting to see data — they see nothing. There is also no baseline price to compare against for the first scheduled run.
+
+This is not a case of Claude producing incorrect code. It is a case of Claude implementing exactly what was asked without thinking one step ahead about the user experience. The requirement gap should have been flagged proactively during design, not caught during manual testing.
 
 ### How it was caught
 
-During manual testing review, the question came up: "shouldn't we fetch the price when registering a product?"
+During testing, the question came up: "shouldn't we fetch the price when registering a product?"
 
 ### The fix
 
