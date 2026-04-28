@@ -25,8 +25,13 @@ public class ProductService {
     public List<ProductResponse> getAllProducts() {
         return productRepository.findAll().stream()
                 .map(p -> {
-                    var latest = priceCheckRepository.findLastSuccessfulByProductId(p.getId());
-                    return new ProductResponse(p, latest.map(PriceCheck::getPrice).orElse(null));
+                    var lastOk = priceCheckRepository.findLastSuccessfulByProductId(p.getId());
+                    var lastAny = priceCheckRepository.findLastByProductId(p.getId());
+                    return new ProductResponse(
+                            p,
+                            lastOk.map(PriceCheck::getPrice).orElse(null),
+                            lastAny.map(PriceCheck::getStatus).orElse(null)
+                    );
                 })
                 .toList();
     }
@@ -44,7 +49,7 @@ public class ProductService {
         // Runs async — product is saved regardless of scraping outcome.
         priceMonitorService.checkProduct(product);
 
-        return new ProductResponse(product, null);
+        return new ProductResponse(product, null, null);
     }
 
     @Transactional
@@ -58,7 +63,16 @@ public class ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found: " + id));
         product.setActive(!product.isActive());
-        return new ProductResponse(product, null);
+        return new ProductResponse(product, null, null);
+    }
+
+    @Transactional
+    public ProductResponse updateProduct(Long id, ProductRequest request) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found: " + id));
+        product.setName(request.getName());
+        product.setUrl(request.getUrl());
+        return new ProductResponse(product, null, null);
     }
 
     public List<PriceCheckResponse> getHistory(Long productId) {

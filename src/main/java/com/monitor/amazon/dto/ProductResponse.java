@@ -14,13 +14,15 @@ public class ProductResponse {
     private final boolean active;
     private final LocalDateTime createdAt;
     private final BigDecimal latestPrice;
+    private final String lastCheckStatus;
 
-    public ProductResponse(Product product, BigDecimal latestPrice) {
+    public ProductResponse(Product product, BigDecimal latestPrice, String lastCheckStatus) {
         this.id = product.getId();
         this.url = product.getUrl();
         this.name = product.getName();
         this.active = product.isActive();
         this.createdAt = product.getCreatedAt();
         this.latestPrice = latestPrice;
+        this.lastCheckStatus = lastCheckStatus;
     }
 }

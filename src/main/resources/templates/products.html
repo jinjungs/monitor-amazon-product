@@ -4,11 +4,18 @@
     <meta charset="UTF-8">
     <title>Product Monitor</title>
     <style>
-        body { font-family: sans-serif; max-width: 960px; margin: 40px auto; padding: 0 20px; }
+        body { font-family: sans-serif; max-width: 1000px; margin: 40px auto; padding: 0 20px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 10px 12px; border: 1px solid #ddd; text-align: left; }
+        th, td { padding: 10px 12px; border: 1px solid #ddd; text-align: left; vertical-align: middle; }
         th { background: #f5f5f5; }
         tr.inactive td { color: #999; }
+
+        /* Status badge */
+        .badge { padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; }
+        .badge-ok { background: #d4edda; color: #155724; }
+        .badge-error { background: #f8d7da; color: #721c24; }
+        .badge-unavailable { background: #fff3cd; color: #856404; }
+        .badge-none { background: #e9ecef; color: #6c757d; }
 
         /* Toggle switch */
         .toggle { position: relative; display: inline-block; width: 44px; height: 24px; }
@@ -18,13 +25,29 @@
         input:checked + .slider { background: #2ecc71; }
         input:checked + .slider::before { transform: translateX(20px); }
 
-        /* Delete button */
-        .btn-delete { padding: 5px 12px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        /* Buttons */
+        .btn { padding: 5px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; }
+        .btn-edit { background: #3498db; color: white; }
+        .btn-edit:hover { background: #2980b9; }
+        .btn-delete { background: #e74c3c; color: white; }
         .btn-delete:hover { background: #c0392b; }
 
-        form.add-form { display: flex; gap: 10px; margin-top: 24px; }
-        form.add-form input { padding: 8px; flex: 1; border: 1px solid #ccc; border-radius: 4px; }
+        /* Add form */
+        form.add-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; margin-top: 24px; }
+        form.add-form input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
         form.add-form button { padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
+
+        /* Modal */
+        .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; }
+        .modal-backdrop.open { display: flex; align-items: center; justify-content: center; }
+        .modal { background: white; padding: 28px; border-radius: 8px; width: 480px; }
+        .modal h2 { margin: 0 0 20px; font-size: 1.1em; }
+        .modal label { display: block; margin-bottom: 4px; font-size: 0.9em; color: #555; }
+        .modal input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 14px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+        .btn-save { background: #2ecc71; color: white; }
+        .btn-cancel { background: #95a5a6; color: white; }
+
         nav { margin-bottom: 20px; }
         nav a { margin-right: 16px; text-decoration: none; color: #3498db; }
     </style>
@@ -43,15 +66,23 @@
                 <th>Name</th>
                 <th>URL</th>
                 <th>Latest Price</th>
+                <th>Last Check</th>
                 <th>Active</th>
+                <th>Edit</th>
                 <th>Delete</th>
             </tr>
         </thead>
         <tbody>
             <tr th:each="p : ${products}" th:class="${p.active} ? '' : 'inactive'">
                 <td th:text="${p.name ?: 'Unknown'}"></td>
-                <td><a th:href="${p.url}" th:text="${#strings.abbreviate(p.url, 60)}" target="_blank"></a></td>
+                <td><a th:href="${p.url}" th:text="${#strings.abbreviate(p.url, 50)}" target="_blank"></a></td>
                 <td th:text="${p.latestPrice != null} ? '$' + ${#numbers.formatDecimal(p.latestPrice, 1, 2)} : '-'"></td>
+                <td>
+                    <span th:if="${p.lastCheckStatus == null}" class="badge badge-none">No data</span>
+                    <span th:if="${p.lastCheckStatus == 'ok'}" class="badge badge-ok">OK</span>
+                    <span th:if="${p.lastCheckStatus == 'error'}" class="badge badge-error">Error</span>
+                    <span th:if="${p.lastCheckStatus == 'unavailable'}" class="badge badge-unavailable">Unavailable</span>
+                </td>
                 <td>
                     <label class="toggle">
                         <input type="checkbox" th:checked="${p.active}" th:onchange="'toggleProduct(' + ${p.id} + ')'">
@@ -59,25 +90,46 @@
                     </label>
                 </td>
                 <td>
-                    <button class="btn-delete" th:onclick="'deleteProduct(' + ${p.id} + ')'">Delete</button>
+                    <button class="btn btn-edit"
+                            th:onclick="'openEdit(' + ${p.id} + ', \'' + ${p.name} + '\', \'' + ${p.url} + '\')'">Edit</button>
+                </td>
+                <td>
+                    <button class="btn btn-delete" th:onclick="'deleteProduct(' + ${p.id} + ')'">Delete</button>
                 </td>
             </tr>
         </tbody>
     </table>
 
     <form class="add-form" onsubmit="addProduct(event)">
-        <input type="url" id="url" placeholder="Amazon product URL" required>
         <input type="text" id="name" placeholder="Product name (optional)">
+        <input type="url" id="url" placeholder="Amazon product URL" required>
         <button type="submit">Add Product</button>
     </form>
 
+    <!-- Edit modal -->
+    <div class="modal-backdrop" id="editModal">
+        <div class="modal">
+            <h2>Edit Product</h2>
+            <label>Name</label>
+            <input type="text" id="editName" placeholder="Product name">
+            <label>URL</label>
+            <input type="url" id="editUrl" placeholder="Amazon product URL">
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeEdit()">Cancel</button>
+                <button class="btn btn-save" onclick="saveEdit()">Save</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        let editingId = null;
+
         async function addProduct(e) {
             e.preventDefault();
             await fetch('/api/products', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: document.getElementById('url').value, name: document.getElementById('name').value })
+                body: JSON.stringify({ name: document.getElementById('name').value, url: document.getElementById('url').value })
             });
             location.reload();
         }
@@ -92,6 +144,32 @@
             await fetch('/api/products/' + id + '/toggle', { method: 'PATCH' });
             location.reload();
         }
+
+        function openEdit(id, name, url) {
+            editingId = id;
+            document.getElementById('editName').value = name === 'null' ? '' : name;
+            document.getElementById('editUrl').value = url;
+            document.getElementById('editModal').classList.add('open');
+        }
+
+        function closeEdit() {
+            document.getElementById('editModal').classList.remove('open');
+            editingId = null;
+        }
+
+        async function saveEdit() {
+            await fetch('/api/products/' + editingId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: document.getElementById('editName').value, url: document.getElementById('editUrl').value })
+            });
+            closeEdit();
+            location.reload();
+        }
+
+        document.getElementById('editModal').addEventListener('click', function(e) {
+            if (e.target === this) closeEdit();
+        });
     </script>
 </body>
 </html>

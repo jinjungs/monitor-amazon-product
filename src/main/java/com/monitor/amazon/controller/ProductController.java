@@ -55,6 +55,12 @@ public class ProductController {
         return ResponseEntity.ok(productService.toggleActive(id));
     }
 
+    @PutMapping("/api/products/{id}")
+    @ResponseBody
+    public ResponseEntity<ProductResponse> updateProduct(@PathVariable Long id, @RequestBody ProductRequest request) {
+        return ResponseEntity.ok(productService.updateProduct(id, request));
+    }
+
     @GetMapping("/api/products/{id}/history")
     @ResponseBody
     public List<PriceCheckResponse> getHistory(@PathVariable Long id) {
