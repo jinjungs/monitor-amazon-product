@@ -91,7 +91,10 @@
                 </td>
                 <td>
                     <button class="btn btn-edit"
-                            th:onclick="'openEdit(' + ${p.id} + ', \'' + ${p.name} + '\', \'' + ${p.url} + '\')'">Edit</button>
+                            th:data-id="${p.id}"
+                            th:data-name="${p.name}"
+                            th:data-url="${p.url}"
+                            onclick="openEditFromBtn(this)">Edit</button>
                 </td>
                 <td>
                     <button class="btn btn-delete" th:onclick="'deleteProduct(' + ${p.id} + ')'">Delete</button>
@@ -145,10 +148,10 @@
             location.reload();
         }
 
-        function openEdit(id, name, url) {
-            editingId = id;
-            document.getElementById('editName').value = name === 'null' ? '' : name;
-            document.getElementById('editUrl').value = url;
+        function openEditFromBtn(btn) {
+            editingId = btn.dataset.id;
+            document.getElementById('editName').value = btn.dataset.name !== 'null' ? btn.dataset.name : '';
+            document.getElementById('editUrl').value = btn.dataset.url;
             document.getElementById('editModal').classList.add('open');
         }
 
