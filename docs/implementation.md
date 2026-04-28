@@ -60,9 +60,9 @@
 ---
 
 ## Step 8 — Docker + CI
-- [ ] `Dockerfile`
-- [ ] `docker-compose.yml` (app + PostgreSQL)
-- [ ] `.github/workflows/ci.yml` — run tests on push
+- [x] `Dockerfile`
+- [x] `docker-compose.yml` (app + PostgreSQL)
+- [x] `.github/workflows/ci.yml` — run tests on push
 
 ---
 
