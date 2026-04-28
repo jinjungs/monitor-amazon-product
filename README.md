@@ -2,6 +2,24 @@
 
 Monitors Amazon product prices and sends a Slack notification when a price drop is detected.
 
+## Development Approach
+
+This project was built with a structured planning-first approach using Claude Code as an AI assistant.
+
+1. **[Requirements](docs/requirements.md)** — Started by thoroughly reading the brief and extracting every requirement and evaluation criterion.
+
+2. **[Requirement Analysis](docs/clarify-requirements.md)** — Went through each requirement one by one with Claude to make concrete decisions: what to build, what to skip, and why. Covered scheduling strategy, storage choice, notification method, threshold logic, stretch goals, and panel discussion points.
+
+3. **[Architecture](docs/architecture.md)** — Defined the full system design: tech stack with rationale, data flow diagram, DB schema, endpoints, and test strategy. Updated iteratively as decisions were finalized.
+
+4. **[Implementation Plan](docs/implementation.md)** — Broke the build into 9 sequential steps and executed them one at a time, checking off each item as it was completed.
+
+5. **[Design Doc](docs/design.md)** — Documented the four key tradeoffs, stretch goal outcomes, and known gaps — the primary material for the panel discussion.
+
+6. **[AI-NOTES](docs/AI-NOTES.md)** — Recorded five cases where the AI assistant produced incomplete or incorrect work, and how each was caught and corrected.
+
+---
+
 ## Screenshots
 
 ### Product Management
