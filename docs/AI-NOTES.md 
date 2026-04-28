@@ -1,6 +1,6 @@
 # AI-NOTES
 
-Total issues caught: 4
+Total issues caught: 5
 
 ---
 
@@ -120,5 +120,34 @@ function openEditFromBtn(btn) {
     editingId = btn.dataset.id;
     document.getElementById('editName').value = btn.dataset.name;
     document.getElementById('editUrl').value = btn.dataset.url;
+}
+```
+
+---
+
+## #5 — Missing abstraction for UI-facing exceptions
+
+### What Claude did
+
+When handling the duplicate URL error, Claude reached for `DataIntegrityViolationException` — a Spring infrastructure exception — and caught it directly in the controller with a try-catch block. It worked, but each new business error would have required its own catch block and its own Spring-specific exception type.
+
+### Why it was a weak design
+
+Claude solved the immediate problem without thinking about the pattern. A well-designed system has one exception type for UI-facing business errors, one handler, and only the message changes per case. Claude's instinct was to handle each case individually rather than generalizing first.
+
+This is a recurring weakness: Claude tends to produce working, specific solutions before considering whether a shared abstraction is more appropriate. It required a human prompt to step back and ask "shouldn't this be one exception with different messages?"
+
+### The fix
+
+Define one `BusinessException` and one `@RestControllerAdvice` handler. Every business rule violation in any service throws `BusinessException(message)` — the handler returns 409 with the message. No try-catch in controllers, no Spring internals leaking into business logic.
+
+```java
+// any service, any rule
+throw new BusinessException("Product with this URL is already being monitored.");
+
+// one place handles it all
+@ExceptionHandler(BusinessException.class)
+public ResponseEntity<String> handle(BusinessException e) {
+    return ResponseEntity.status(409).body(e.getMessage());
 }
 ```
