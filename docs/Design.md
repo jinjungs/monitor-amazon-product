@@ -12,10 +12,12 @@ Build a system that monitors a configurable set of Amazon product prices, persis
 
 | | Java + Spring Boot | Python + FastAPI/APScheduler |
 |---|---|---|
-| **Pros** | Preferred by the brief; familiar; `@Scheduled`, JPA, Retry all built-in | Mature scraping ecosystem (requests, BeautifulSoup); faster to prototype |
+| **Pros** | Preferred by the brief; familiar; | Mature scraping ecosystem (requests, BeautifulSoup); faster to prototype |
 | **Cons** | More boilerplate than Python | Less justified here — Python's scraping advantage doesn't apply in this case |
 
-**Why Java:** Two reasons. First, the brief explicitly prefers Java and it is the production stack. Second, Python's scraping ecosystem advantage does not apply here. Amazon renders prices server-side in the raw HTML — jsoup parses the same DOM that BeautifulSoup would. The key question was whether JavaScript execution was needed; it is not, so jsoup is fully sufficient. There is no scraping limitation that would justify choosing Python over a language we know better.
+**Why Java:** 
+1. The brief explicitly prefers Java and it is the production stack. 
+2. Python's scraping ecosystem advantage does not apply here. Amazon renders prices server-side in the raw HTML — jsoup parses the same DOM that BeautifulSoup would. The key question was whether JavaScript execution was needed; it is not, so jsoup is fully sufficient. There is no scraping limitation that would justify choosing Python over a language we know better.
 
 **Tradeoff:** Python would have been faster to prototype. Java is the right call given familiarity, the brief's preference, and the fact that the scraping gap between the two languages is zero for this specific use case.
 
@@ -34,7 +36,7 @@ Build a system that monitors a configurable set of Amazon product prices, persis
 
 **Tradeoff:** H2 would have eliminated Docker as a dependency and simplified setup. The cost of PostgreSQL is worth the defensibility.
 
-**At 10x scale:** Schema unchanged. The index on `(product_id, checked_at DESC)` covers all query patterns. At 100x+: read replicas, monthly partitioning, or TimescaleDB.
+> **At 10x scale:** Schema unchanged. The index on `(product_id, checked_at DESC)` covers all query patterns. At 100x+: read replicas, monthly partitioning, or TimescaleDB.
 
 ---
 
@@ -68,6 +70,16 @@ Build a system that monitors a configurable set of Amazon product prices, persis
 
 ---
 
+## Stretch Goals Implemented
+
+| # | Goal | Status | Notes |
+|---|---|---|---|
+| 3 | Deployability | ✅ Done | Dockerfile + docker-compose + GitHub Actions CI |
+| 6 | Concurrency correctness | ⚠️ Partial | Intra-instance duplicates prevented via `@Transactional` (read last price + write new check atomically). Cross-instance deduplication not implemented — Redis distributed lock would be required. |
+| 7 | REST export | ✅ Done | `GET /api/products`, `GET /api/products/{id}/history` — contract documented in README |
+
+---
+
 ## Known Gaps (Left Intentionally)
 
 | Gap | Why left |
@@ -75,7 +87,7 @@ Build a system that monitors a configurable set of Amazon product prices, persis
 | Amazon bot detection / CAPTCHA | Proxy rotation or headless browser required — out of scope. Handled gracefully: recorded as `status='unavailable'`, no notification triggered |
 | No authentication | Single-user tool on private infrastructure. Spring Security is the natural next step for multi-user deployment |
 | No notification retry | Fire-and-forget is acceptable for hourly monitoring. Outbox pattern is the production solution |
-| No cross-instance deduplication | Single-instance deployment assumed. Redis distributed lock would be needed at scale |
+| Cross-instance duplicate notifications | Single-instance deployment assumed. `@Transactional` prevents duplicates within one instance. Redis distributed lock would be needed for multi-instance |
 
 ---
 

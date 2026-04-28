@@ -4,25 +4,6 @@
 
 ---
 
-#### Three tradeoffs (Design.md)
-
-1. **Storage: PostgreSQL over H2**
-   - H2 file mode is zero-infra but dev-grade — not what you'd run in production
-   - PostgreSQL is one docker-compose service; JPA layer is identical either way
-   - H2 still used for tests (in-memory, no infra needed in CI)
-
-2. **Scheduling: Spring `@Scheduled` + `ThreadPoolTaskExecutor` over Quartz / Celery**
-   - Quartz is powerful but requires significant configuration for a handful of products
-   - In-process scheduler means one deployment artifact, no broker dependency
-   - Known tradeoff: if the process dies, in-flight jobs are lost — acceptable for an hourly monitor
-
-3. **Notification: Slack webhook over Email / SMS**
-   - Free, zero setup friction, verifiable by a reviewer in real time
-   - Email requires SMTP auth and risks spam filters; SMS costs money
-   - Notification interface is abstract — swapping to email means one new class, no changes elsewhere
-
----
-
 #### One place where the solution could break (known, left alone)
 
 - **Amazon bot detection / CAPTCHA**
