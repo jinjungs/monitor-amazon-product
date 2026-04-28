@@ -52,10 +52,10 @@
 ---
 
 ## Step 7 — Tests
-- [ ] `ScraperTest` — parse static HTML fixture in `src/test/resources`
-- [ ] `StorageTest` — `@DataJpaTest`, write/read roundtrip, last-price query
-- [ ] `CheckerTest` — threshold logic, no false positive on price increase, null price
-- [ ] `NotifierTest` — WireMock, correct payload, failure does not crash
+- [x] `ScraperTest` — parse static HTML fixture in `src/test/resources`
+- [x] `StorageTest` — `@DataJpaTest`, write/read roundtrip, last-price query
+- [x] `CheckerTest` — threshold logic, no false positive on price increase, null price
+- [x] `NotifierTest` — WireMock, correct payload, failure does not crash
 
 ---
 

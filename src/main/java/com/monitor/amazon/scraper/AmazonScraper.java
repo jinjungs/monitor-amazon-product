@@ -54,6 +54,17 @@ public class AmazonScraper {
                 .build();
     }
 
+    ScrapeResult parseDocument(Document doc, String url) {
+        if (isCaptchaPage(doc)) throw new CaptchaException(url);
+        String productName = extractProductName(doc);
+        BigDecimal price = extractPrice(doc, url);
+        return ScrapeResult.builder()
+                .price(price)
+                .currency("USD")
+                .productName(productName)
+                .build();
+    }
+
     @Recover
     public ScrapeResult recover(Exception e, String url) {
         log.error("Scraping failed after retries url={} error={}", url, e.getMessage());
