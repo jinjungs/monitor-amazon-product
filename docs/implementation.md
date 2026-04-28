@@ -67,6 +67,6 @@
 ---
 
 ## Step 9 — Docs
-- [ ] `README.md` — install, configure, run, verify end-to-end
-- [ ] `Design.md` — three tradeoffs
-- [ ] `AI-NOTES.md` — one thing Claude got wrong
+- [x] `README.md` — install, configure, run, verify end-to-end
+- [x] `Design.md` — four tradeoffs, stretch goals status, known gaps
+- [x] `AI-NOTES.md` — five cases where Claude produced incomplete or incorrect work
