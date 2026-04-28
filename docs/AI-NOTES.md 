@@ -1,6 +1,10 @@
 # AI-NOTES
 
-## What Claude got wrong: missing initial price fetch on product registration
+Total issues caught: 2
+
+---
+
+## #1 — Missing initial price fetch on product registration
 
 ### What Claude did
 
@@ -12,13 +16,13 @@ The scheduled job would pick up the new product on the next tick (up to 1 hour l
 
 The dashboard is useless for a new product until the first price check runs. A user adds a product and immediately opens the dashboard expecting to see something — they see nothing. This is a poor UX and also means there's no baseline price to compare against for the first scheduled run.
 
-### How it was caught and fixed
+### How it was caught
 
-During manual testing review, the question came up: "shouldn't we fetch the price when registering a product?" The answer was clearly yes.
+During manual testing review, the question came up: "shouldn't we fetch the price when registering a product?"
 
 ### The fix
 
-After saving the product, trigger `PriceMonitorService.checkProduct()` immediately. Since it is annotated `@Async`, it runs on a separate thread — the product registration response returns instantly regardless of whether the scrape succeeds or fails. The two concerns are deliberately decoupled: registration always succeeds, scraping may fail silently and is recorded as `status='error'` in `price_checks`.
+After saving the product, trigger `PriceMonitorService.checkProduct()` immediately. Since it is annotated `@Async`, it runs on a separate thread — the product registration response returns instantly regardless of scraping outcome. Registration always succeeds; scraping may fail silently and is recorded as `status='error'` in `price_checks`.
 
 ```java
 productRepository.save(product);
@@ -26,4 +30,32 @@ priceMonitorService.checkProduct(product);  // async, non-blocking
 return new ProductResponse(product, null);
 ```
 
-This is the right boundary: transactional for the DB write, fire-and-forget for the scrape.
+---
+
+## #2 — Delete failing due to foreign key constraint
+
+### What Claude did
+
+Claude implemented `deleteProduct()` as a direct `productRepository.deleteById(id)` without considering that `price_checks` holds a foreign key reference to `products`. The UI delete button silently failed.
+
+### Why it was wrong
+
+PostgreSQL enforces the FK constraint — deleting a product that has associated `price_checks` rows is rejected at the DB level. Claude generated the schema with `REFERENCES products(id)` but did not handle the cascading delete in the service layer.
+
+### How it was caught
+
+During manual testing: clicking the Delete button had no effect. The root cause was a FK violation thrown by PostgreSQL and swallowed by the frontend.
+
+### The fix
+
+Delete all associated `price_checks` rows first within the same transaction, then delete the product.
+
+```java
+@Transactional
+public void deleteProduct(Long id) {
+    priceCheckRepository.deleteAllByProductId(id);
+    productRepository.deleteById(id);
+}
+```
+
+An alternative would be `ON DELETE CASCADE` on the FK at the schema level, but explicit deletion in the service layer makes the behavior visible and testable.
