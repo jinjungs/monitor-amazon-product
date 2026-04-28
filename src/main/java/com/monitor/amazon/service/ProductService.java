@@ -1,0 +1,62 @@
+package com.monitor.amazon.service;
+
+import com.monitor.amazon.domain.PriceCheck;
+import com.monitor.amazon.domain.Product;
+import com.monitor.amazon.dto.PriceCheckResponse;
+import com.monitor.amazon.dto.ProductRequest;
+import com.monitor.amazon.dto.ProductResponse;
+import com.monitor.amazon.repository.PriceCheckRepository;
+import com.monitor.amazon.repository.ProductRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class ProductService {
+
+    private final ProductRepository productRepository;
+    private final PriceCheckRepository priceCheckRepository;
+
+    public List<ProductResponse> getAllProducts() {
+        return productRepository.findAll().stream()
+                .map(p -> {
+                    var latest = priceCheckRepository.findLastSuccessfulByProductId(p.getId());
+                    return new ProductResponse(p, latest.map(PriceCheck::getPrice).orElse(null));
+                })
+                .toList();
+    }
+
+    @Transactional
+    public ProductResponse addProduct(ProductRequest request) {
+        Product product = Product.builder()
+                .url(request.getUrl())
+                .name(request.getName())
+                .active(true)
+                .build();
+        productRepository.save(product);
+        return new ProductResponse(product, null);
+    }
+
+    @Transactional
+    public void deleteProduct(Long id) {
+        productRepository.deleteById(id);
+    }
+
+    @Transactional
+    public ProductResponse toggleActive(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found: " + id));
+        product.setActive(!product.isActive());
+        return new ProductResponse(product, null);
+    }
+
+    public List<PriceCheckResponse> getHistory(Long productId) {
+        return priceCheckRepository.findByProductIdOrderByCheckedAtDesc(productId)
+                .stream()
+                .map(PriceCheckResponse::new)
+                .toList();
+    }
+}

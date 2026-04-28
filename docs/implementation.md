@@ -44,10 +44,10 @@
 ---
 
 ## Step 6 — REST API + UI
-- [ ] `ProductController` — `GET/POST /api/products`, `DELETE /api/products/{id}`, `PATCH /api/products/{id}/toggle`
-- [ ] `HistoryController` — `GET /api/products/{id}/history`
-- [ ] Thymeleaf product management page (`GET /products`)
-- [ ] Thymeleaf dashboard page with Chart.js (`GET /dashboard`)
+- [x] `ProductController` — `GET/POST /api/products`, `DELETE /api/products/{id}`, `PATCH /api/products/{id}/toggle`
+- [x] `HistoryController` — `GET /api/products/{id}/history`
+- [x] Thymeleaf product management page (`GET /products`)
+- [x] Thymeleaf dashboard page with Chart.js (`GET /dashboard`)
 
 ---
 

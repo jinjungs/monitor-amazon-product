@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Price History Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: sans-serif; max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        .chart-container { margin: 32px 0; padding: 20px; border: 1px solid #eee; border-radius: 8px; }
+        h2 { margin-bottom: 4px; }
+        .meta { color: #888; font-size: 0.9em; margin-bottom: 16px; }
+        nav { margin-bottom: 20px; }
+        nav a { margin-right: 16px; text-decoration: none; color: #3498db; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/products">Products</a>
+        <a href="/dashboard">Dashboard</a>
+    </nav>
+
+    <h1>Price History Dashboard</h1>
+
+    <div th:each="p : ${products}" class="chart-container">
+        <h2 th:text="${p.name ?: 'Unknown Product'}"></h2>
+        <div class="meta">
+            <span th:text="${p.active} ? 'Active' : 'Paused'"></span> ·
+            Latest: <span th:text="${p.latestPrice != null} ? '$' + ${#numbers.formatDecimal(p.latestPrice, 1, 2)} : 'N/A'"></span>
+        </div>
+        <canvas th:id="'chart-' + ${p.id}"></canvas>
+    </div>
+
+    <script th:inline="javascript">
+        const products = [[${products}]];
+
+        products.forEach(p => {
+            fetch('/api/products/' + p.id + '/history')
+                .then(r => r.json())
+                .then(history => {
+                    const ok = history.filter(h => h.status === 'ok').reverse();
+                    const labels = ok.map(h => new Date(h.checkedAt).toLocaleString());
+                    const prices = ok.map(h => h.price);
+
+                    const ctx = document.getElementById('chart-' + p.id);
+                    if (!ctx || prices.length === 0) return;
+
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels,
+                            datasets: [{
+                                label: 'Price (USD)',
+                                data: prices,
+                                borderColor: '#3498db',
+                                backgroundColor: 'rgba(52,152,219,0.1)',
+                                tension: 0.3,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: { ticks: { callback: v => '$' + v.toFixed(2) } }
+                            }
+                        }
+                    });
+                });
+        });
+    </script>
+</body>
+</html>

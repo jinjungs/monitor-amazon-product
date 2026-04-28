@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Product Monitor</title>
+    <style>
+        body { font-family: sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px 12px; border: 1px solid #ddd; text-align: left; }
+        th { background: #f5f5f5; }
+        .inactive { color: #999; }
+        .btn { padding: 6px 12px; cursor: pointer; border: none; border-radius: 4px; }
+        .btn-delete { background: #e74c3c; color: white; }
+        .btn-toggle { background: #3498db; color: white; }
+        form.add-form { display: flex; gap: 10px; margin-top: 24px; }
+        form.add-form input { padding: 8px; flex: 1; border: 1px solid #ccc; border-radius: 4px; }
+        form.add-form button { padding: 8px 16px; background: #2ecc71; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        nav { margin-bottom: 20px; }
+        nav a { margin-right: 16px; text-decoration: none; color: #3498db; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/products">Products</a>
+        <a href="/dashboard">Dashboard</a>
+    </nav>
+
+    <h1>Monitored Products</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>URL</th>
+                <th>Latest Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="p : ${products}" th:class="${p.active} ? '' : 'inactive'">
+                <td th:text="${p.name ?: 'Unknown'}"></td>
+                <td><a th:href="${p.url}" th:text="${#strings.abbreviate(p.url, 60)}" target="_blank"></a></td>
+                <td th:text="${p.latestPrice != null} ? '$' + ${#numbers.formatDecimal(p.latestPrice, 1, 2)} : '-'"></td>
+                <td th:text="${p.active} ? 'Active' : 'Paused'"></td>
+                <td>
+                    <button class="btn btn-toggle" th:onclick="'toggleProduct(' + ${p.id} + ')'">Toggle</button>
+                    <button class="btn btn-delete" th:onclick="'deleteProduct(' + ${p.id} + ')'">Delete</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <form class="add-form" onsubmit="addProduct(event)">
+        <input type="url" id="url" placeholder="Amazon product URL" required>
+        <input type="text" id="name" placeholder="Product name (optional)">
+        <button type="submit">Add Product</button>
+    </form>
+
+    <script>
+        async function addProduct(e) {
+            e.preventDefault();
+            await fetch('/api/products', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: document.getElementById('url').value, name: document.getElementById('name').value })
+            });
+            location.reload();
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('Delete this product?')) return;
+            await fetch('/api/products/' + id, { method: 'DELETE' });
+            location.reload();
+        }
+
+        async function toggleProduct(id) {
+            await fetch('/api/products/' + id + '/toggle', { method: 'PATCH' });
+            location.reload();
+        }
+    </script>
+</body>
+</html>
