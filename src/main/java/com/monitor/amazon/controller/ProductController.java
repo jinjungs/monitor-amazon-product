@@ -5,8 +5,6 @@ import com.monitor.amazon.dto.ProductRequest;
 import com.monitor.amazon.dto.ProductResponse;
 import com.monitor.amazon.service.ProductService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -40,12 +38,8 @@ public class ProductController {
 
     @PostMapping("/api/products")
     @ResponseBody
-    public ResponseEntity<?> addProduct(@RequestBody ProductRequest request) {
-        try {
-            return ResponseEntity.ok(productService.addProduct(request));
-        } catch (DataIntegrityViolationException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        }
+    public ResponseEntity<ProductResponse> addProduct(@RequestBody ProductRequest request) {
+        return ResponseEntity.ok(productService.addProduct(request));
     }
 
     @DeleteMapping("/api/products/{id}")
