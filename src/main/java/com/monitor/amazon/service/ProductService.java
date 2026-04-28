@@ -9,6 +9,7 @@ import com.monitor.amazon.repository.PriceCheckRepository;
 import com.monitor.amazon.repository.ProductRepository;
 import com.monitor.amazon.scheduler.PriceMonitorService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +39,10 @@ public class ProductService {
 
     @Transactional
     public ProductResponse addProduct(ProductRequest request) {
+        if (productRepository.existsByUrl(request.getUrl())) {
+            throw new DataIntegrityViolationException("Product with this URL is already being monitored.");
+        }
+
         Product product = Product.builder()
                 .url(request.getUrl())
                 .name(request.getName())
