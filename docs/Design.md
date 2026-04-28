@@ -6,68 +6,84 @@ Build a system that monitors a configurable set of Amazon product prices, persis
 
 ---
 
-## Language & Stack Choice
+## Tradeoff 1 — Language: Java over Python
 
-**Java 21 + Spring Boot 3**
+**Chosen:** Java 21 + Spring Boot 3
 
-The brief prefers Java. More importantly, the problem maps naturally to Spring's built-in primitives: `@Scheduled` for periodic checks, Spring Data JPA for persistence, and Spring Retry for resilient scraping. The alternative (Python + APScheduler + SQLAlchemy) would have solved the same problem but offered no meaningful advantage given familiarity with the Spring ecosystem.
+| | Java + Spring Boot | Python + FastAPI/APScheduler |
+|---|---|---|
+| **Pros** | Preferred by the brief; familiar; `@Scheduled`, JPA, Retry all built-in | Mature scraping ecosystem; faster to prototype |
+| **Cons** | More boilerplate than Python | Weaker justification for scraping advantage (jsoup handles Amazon fine) |
 
-Scraping is handled by **jsoup**. Amazon renders product prices server-side for SEO — the price is present in the raw HTML response and does not require JavaScript execution. jsoup is sufficient for this and carries no meaningful limitation compared to Python's BeautifulSoup for this specific use case.
+**Why Java:** The brief explicitly prefers Java, and the problem maps naturally to Spring primitives. jsoup parses Amazon's server-side rendered HTML just as well as Python's BeautifulSoup — there is no scraping limitation that would justify switching languages.
 
----
-
-## Tradeoff 1 — Storage: PostgreSQL over H2
-
-**Chosen:** PostgreSQL via docker-compose  
-**Alternative considered:** H2 in file mode (zero infrastructure, embedded in the app)
-
-H2 file mode would have eliminated the need for Docker entirely and simplified local setup. However, H2 is a development-grade database — not what you would run in production, and harder to defend in a panel discussion. PostgreSQL is the correct choice for a system that needs to durably persist price history.
-
-The cost is one additional docker-compose service. The JPA layer is identical either way — switching between H2 (tests) and PostgreSQL (prod) requires changing a single `datasource.url` config line.
-
-**At 10x scale (100+ products):** PostgreSQL handles the write volume without schema changes. The index on `(product_id, checked_at DESC)` already covers all query patterns. The real 10x problem is scraping throughput and Amazon rate limiting, not storage.
+**Tradeoff:** Python would have been faster to prototype under a strict time budget. Java produces a more defensible solution given the panel context.
 
 ---
 
-## Tradeoff 2 — Scheduling: In-Process `@Scheduled` over External Worker
+## Tradeoff 2 — Storage: PostgreSQL over H2
 
-**Chosen:** Spring `@Scheduled` + `ThreadPoolTaskExecutor` (in-process)  
-**Alternative considered:** Celery (Python) or Quartz Scheduler with a job store
+**Chosen:** PostgreSQL via docker-compose
 
-An external task queue (Celery + Redis, or Quartz + DB-backed job store) would provide job persistence across restarts, distributed execution, and a dedicated retry infrastructure. However, it also requires a broker dependency and significantly more configuration.
+| | PostgreSQL | H2 (file mode) |
+|---|---|---|
+| **Pros** | Production-grade; full SQL tooling; defensible at any scale | Zero infrastructure; single config line; no Docker required |
+| **Cons** | Requires Docker to run locally | Dev-grade only; hard to defend in production discussion |
 
-For a system that checks a handful of products on an hourly interval, in-process scheduling is the right fit. If the process restarts mid-check, the in-flight job is lost — but the next scheduled tick resumes normally from DB state within at most one interval. This is an acceptable gap for a price monitor where hourly resolution is sufficient.
+**Why PostgreSQL:** H2 file mode works for this scope but is not what you would run in production. PostgreSQL adds one docker-compose service and the JPA layer stays identical — switching between H2 (tests) and PostgreSQL (prod) is a single `datasource.url` change.
 
-**Known breakage point:** if two instances of the app run simultaneously (e.g. a deploy overlap), both will scrape and potentially both will notify. Addressed via DB-level transaction isolation: the last-price read and new check write happen atomically, so duplicate notifications are prevented within a single instance. Cross-instance deduplication would require a distributed lock (Redis), which is out of scope here.
+**Tradeoff:** H2 would have eliminated Docker as a dependency and simplified setup. The cost of PostgreSQL is worth the defensibility.
 
----
-
-## Tradeoff 3 — Notification: Slack Webhook over Email or SMS
-
-**Chosen:** Slack webhook  
-**Alternatives considered:** Email (Gmail SMTP), SMS (Twilio)
-
-Email requires SMTP authentication, is prone to landing in spam, and adds setup friction for a reviewer verifying the system end-to-end. SMS costs money per message. A Slack webhook is a single HTTP POST, free, and verifiable in real time by watching a channel.
-
-The notification layer is abstracted behind a `Notifier` interface. Swapping to email or SMS means implementing one new class — no changes to the scheduler or checker logic.
-
-**Notification failures** are logged and silently dropped. A delivery failure does not crash the scheduler. The tradeoff: if Slack is down at the moment of a price drop, that specific notification is lost. At production scale, an outbox table with retry would guarantee delivery — not implemented here as it adds complexity disproportionate to the scope.
+**At 10x scale:** Schema unchanged. The index on `(product_id, checked_at DESC)` covers all query patterns. At 100x+: read replicas, monthly partitioning, or TimescaleDB.
 
 ---
 
-## What I Would Change at Production Scale
+## Tradeoff 3 — Scheduling: `@Scheduled` over Quartz / External Queue
 
-| Current | At scale |
-|---|---|
-| Single-instance in-process scheduler | Distributed lock (Redis) or dedicated job service |
-| Slack webhook | Pluggable notification with outbox pattern for guaranteed delivery |
-| Direct HTML scraping (jsoup) | Proxy rotation or a product data API to handle bot detection |
-| One PostgreSQL instance | Read replica for dashboard queries; time-series partitioning on `price_checks` |
+**Chosen:** Spring `@Scheduled` + `ThreadPoolTaskExecutor` (in-process)
+
+| | `@Scheduled` in-process | Quartz / Celery + broker |
+|---|---|---|
+| **Pros** | Single deployment artifact; no broker; zero config | Job persistence across restarts; distributed execution; dedicated retry |
+| **Cons** | In-flight jobs lost on restart; no cross-instance deduplication | Requires Redis or DB-backed job store; significant configuration overhead |
+
+**Why `@Scheduled`:** A handful of products on an hourly interval does not justify a broker dependency. If the process restarts mid-check, the next tick resumes from DB state within one hour — acceptable for a price monitor.
+
+**Tradeoff:** Cross-instance duplicate notifications are not prevented. If two app instances run simultaneously, both may notify. Within a single instance, DB transaction isolation prevents duplicates.
+
+---
+
+## Tradeoff 4 — Notification: Slack Webhook over Email / SMS
+
+**Chosen:** Slack webhook
+
+| | Slack Webhook | Email (SMTP) | SMS (Twilio) |
+|---|---|---|---|
+| **Pros** | Free; zero setup; verifiable in real time | Universal; no account needed | Reaches anywhere |
+| **Cons** | Requires a Slack workspace | SMTP auth friction; spam risk | Costs money per message |
+
+**Why Slack:** A single HTTP POST, free, and a reviewer can verify it works by watching a channel in real time. The `Notifier` interface abstracts the delivery method — swapping to email or SMS is one new class, no changes to scheduler or checker logic.
+
+**Tradeoff:** Delivery failures are logged and silently dropped. If Slack is down at the moment of a drop, that notification is lost. An outbox pattern would guarantee delivery — not implemented as the complexity is disproportionate to this scope.
 
 ---
 
 ## Known Gaps (Left Intentionally)
 
-- **Amazon bot detection:** a plain HTTP client is detectable. The system handles CAPTCHA gracefully (records `status='unavailable'`, no notification) but does not solve it. Proxy rotation is out of scope.
-- **No authentication:** single-user tool running on private infrastructure. Spring Security would be the natural addition for a multi-user deployment.
-- **No notification retry:** delivery failures are logged and accepted. Next scheduled check re-evaluates the price independently.
+| Gap | Why left |
+|---|---|
+| Amazon bot detection / CAPTCHA | Proxy rotation or headless browser required — out of scope. Handled gracefully: recorded as `status='unavailable'`, no notification triggered |
+| No authentication | Single-user tool on private infrastructure. Spring Security is the natural next step for multi-user deployment |
+| No notification retry | Fire-and-forget is acceptable for hourly monitoring. Outbox pattern is the production solution |
+| No cross-instance deduplication | Single-instance deployment assumed. Redis distributed lock would be needed at scale |
+
+---
+
+## What I Would Change at Production Scale
+
+| Component | Now | At scale |
+|---|---|---|
+| Scraping | jsoup direct HTTP | Proxy rotation or product data API |
+| Scheduler | In-process `@Scheduled` | Distributed lock (Redis) or dedicated job service |
+| Storage | Single PostgreSQL | Read replica + time-series partitioning |
+| Notifications | Slack fire-and-forget | Outbox table with retry |
