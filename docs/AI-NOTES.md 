@@ -1,6 +1,6 @@
 # AI-NOTES
 
-Total issues caught: 3
+Total issues caught: 4
 
 ---
 
@@ -82,4 +82,43 @@ Add `HttpStatusException.class` to `noRetryFor` so all HTTP status errors bypass
 
 ```java
 noRetryFor = {PriceParseException.class, CaptchaException.class, HttpStatusException.class}
+```
+
+---
+
+## #4 — Thymeleaf 3.1 rejects String variables in event handler attributes
+
+### What Claude did
+
+Used `th:onclick` to pass String variables (product name and URL) directly into a JavaScript function call:
+
+```html
+th:onclick="'openEdit(' + ${p.id} + ', \'' + ${p.name} + '\', \'' + ${p.url} + '\')'"
+```
+
+### Why it was wrong
+
+Thymeleaf 3.1 introduced a security restriction that blocks String (and any non-number, non-boolean) variables in DOM event handler attributes (`th:onclick`, `th:onchange`, etc.). This is an XSS prevention measure — user-controlled strings should not be injected directly into inline event handlers.
+
+The page threw a `TemplateProcessingException` at runtime and was completely unusable.
+
+### How it was caught
+
+The page returned a 500 error on load with a clear Thymeleaf exception message pointing to the exact line.
+
+### The fix
+
+Move string values to `data-*` attributes and read them via `dataset` in JavaScript — the pattern Thymeleaf itself recommends in the error message.
+
+```html
+<button th:data-id="${p.id}" th:data-name="${p.name}" th:data-url="${p.url}"
+        onclick="openEditFromBtn(this)">Edit</button>
+```
+
+```javascript
+function openEditFromBtn(btn) {
+    editingId = btn.dataset.id;
+    document.getElementById('editName').value = btn.dataset.name;
+    document.getElementById('editUrl').value = btn.dataset.url;
+}
 ```

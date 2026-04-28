@@ -129,12 +129,15 @@
 
         async function addProduct(e) {
             e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.textContent = 'Fetching price...';
+            btn.disabled = true;
             await fetch('/api/products', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: document.getElementById('name').value, url: document.getElementById('url').value })
             });
-            location.reload();
+            setTimeout(() => location.reload(), 3000);
         }
 
         async function deleteProduct(id) {
