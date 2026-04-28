@@ -7,6 +7,7 @@ import com.monitor.amazon.dto.ProductRequest;
 import com.monitor.amazon.dto.ProductResponse;
 import com.monitor.amazon.repository.PriceCheckRepository;
 import com.monitor.amazon.repository.ProductRepository;
+import com.monitor.amazon.scheduler.PriceMonitorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final PriceCheckRepository priceCheckRepository;
+    private final PriceMonitorService priceMonitorService;
 
     public List<ProductResponse> getAllProducts() {
         return productRepository.findAll().stream()
@@ -37,6 +39,11 @@ public class ProductService {
                 .active(true)
                 .build();
         productRepository.save(product);
+
+        // Trigger an immediate price check after registration.
+        // Runs async — product is saved regardless of scraping outcome.
+        priceMonitorService.checkProduct(product);
+
         return new ProductResponse(product, null);
     }
 

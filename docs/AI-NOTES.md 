@@ -1,0 +1,29 @@
+# AI-NOTES
+
+## What Claude got wrong: missing initial price fetch on product registration
+
+### What Claude did
+
+When designing the product registration flow, Claude implemented `addProduct()` as a pure DB write — save the product, return the response. No price fetch on registration.
+
+The scheduled job would pick up the new product on the next tick (up to 1 hour later). This meant a freshly added product showed `-` for price and an empty dashboard chart until the first scheduled run.
+
+### Why it was wrong
+
+The dashboard is useless for a new product until the first price check runs. A user adds a product and immediately opens the dashboard expecting to see something — they see nothing. This is a poor UX and also means there's no baseline price to compare against for the first scheduled run.
+
+### How it was caught and fixed
+
+During manual testing review, the question came up: "shouldn't we fetch the price when registering a product?" The answer was clearly yes.
+
+### The fix
+
+After saving the product, trigger `PriceMonitorService.checkProduct()` immediately. Since it is annotated `@Async`, it runs on a separate thread — the product registration response returns instantly regardless of whether the scrape succeeds or fails. The two concerns are deliberately decoupled: registration always succeeds, scraping may fail silently and is recorded as `status='error'` in `price_checks`.
+
+```java
+productRepository.save(product);
+priceMonitorService.checkProduct(product);  // async, non-blocking
+return new ProductResponse(product, null);
+```
+
+This is the right boundary: transactional for the DB write, fire-and-forget for the scrape.
