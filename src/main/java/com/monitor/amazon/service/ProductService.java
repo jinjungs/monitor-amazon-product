@@ -49,6 +49,7 @@ public class ProductService {
 
     @Transactional
     public void deleteProduct(Long id) {
+        priceCheckRepository.deleteAllByProductId(id);
         productRepository.deleteById(id);
     }
 

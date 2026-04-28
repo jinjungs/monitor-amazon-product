@@ -19,4 +19,6 @@ public interface PriceCheckRepository extends JpaRepository<PriceCheck, Long> {
     Optional<PriceCheck> findLastSuccessfulByProductId(@Param("productId") Long productId);
 
     List<PriceCheck> findByProductIdOrderByCheckedAtDesc(Long productId);
+
+    void deleteAllByProductId(Long productId);
 }
