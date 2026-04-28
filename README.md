@@ -2,6 +2,17 @@
 
 Monitors Amazon product prices and sends a Slack notification when a price drop is detected.
 
+## Screenshots
+
+### Product Management
+![Products](docs/screenshots/products.png)
+
+### Price History Dashboard
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Slack Notification
+![Slack](docs/screenshots/slack.png)
+
 ## Requirements
 
 - Java 21
