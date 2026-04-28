@@ -129,9 +129,15 @@ Checker   → decides whether to notify (pure logic, no I/O)
 Notifier  → sends Slack POST
 ```
 
-| Layer | Type | What it catches |
-|---|---|---|
-| Scraper | Unit — static HTML fixture in `src/test/resources` | Price extraction breaks if Amazon changes the DOM |
-| Storage | `@DataJpaTest` with H2 in-memory | Write/read roundtrip; last-price query returns correct row |
-| Checker | Plain unit test, no Spring context | Threshold logic (absolute + percentage OR); no false positive on price increase; null price handled |
-| Notifier | WireMock mock server | Correct payload; HTTP call to right URL; failure does not crash scheduler |
+| Layer | Class | Type | What it catches |
+|---|---|---|---|
+| Scraper | `AmazonScraperTest` | Unit — `Jsoup.parse()` with HTML fixture in `src/test/resources/fixtures/` | Price extraction breaks if Amazon changes CSS class names |
+| Storage | `PriceCheckRepositoryTest` | `@DataJpaTest` + H2 in-memory + `@Import(JpaConfig.class)` | Write/read roundtrip; `findLastSuccessfulByProductId` skips error rows and returns most recent ok |
+| Checker | `PriceCheckerTest` | Plain unit — `MonitorProperties` constructed directly, no Spring | Absolute threshold, percentage threshold (OR logic), no alert on increase, no alert when either price is null |
+| Notifier | `SlackNotifierTest` | WireMock standalone server on dynamic port | POST sent to correct path with `application/json`; body contains "Price Drop Alert"; Slack 500 does not throw |
+
+### Key design notes
+
+- `AmazonScraper.parseDocument(Document, String)` is package-private — exposed for testing without needing to mock HTTP
+- `@DataJpaTest` loads only the JPA slice; `@Import(JpaConfig.class)` is required to activate `@EnableJpaAuditing`
+- `AmazonProductApplicationTests` uses `@ActiveProfiles("test")` to load H2 instead of PostgreSQL for context load verification
