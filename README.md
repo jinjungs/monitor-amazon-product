@@ -5,7 +5,11 @@ Monitors Amazon product prices and sends a Slack notification when a price drop 
 ## Requirements
 
 - Java 21
-- Docker & Docker Compose
+- Docker Desktop (includes Docker Compose v2)
+
+> **Install Docker Desktop (Mac):**
+> Download from [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/) → Install → Launch the app → wait for the whale icon in the menu bar to turn solid.
+> Verify: `docker --version`
 
 ## Setup
 
@@ -36,7 +40,7 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 Start PostgreSQL only:
 
 ```bash
-docker-compose up db -d
+docker compose up db -d
 ```
 
 Export env vars and run the app:
@@ -50,7 +54,7 @@ export $(cat .env | xargs)
 
 ```bash
 ./mvnw clean package -DskipTests
-docker-compose up --build
+docker compose up --build
 ```
 
 ---
