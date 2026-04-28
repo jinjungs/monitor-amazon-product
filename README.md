@@ -18,6 +18,12 @@ Monitors Amazon product prices and sends a Slack notification when a price drop 
 - Java 21
 - Docker Desktop (includes Docker Compose v2)
 
+> **Install Java 21 (Mac):**
+> ```bash
+> brew install --cask temurin@21
+> ```
+> Verify: `java -version`
+
 > **Install Docker Desktop (Mac):**
 > ```bash
 > brew install --cask docker
@@ -60,7 +66,7 @@ docker compose up db -d
 Export env vars and run the app:
 
 ```bash
-export $(cat .env | xargs)
+export $(grep -v '^#' .env | xargs)
 ./mvnw spring-boot:run
 ```
 
@@ -109,6 +115,33 @@ All parameters are in `application.yml` — no code changes needed:
 | `monitor.thread-pool.core-size` | `3` | Concurrent scrape threads |
 
 Secrets (`DB_PASSWORD`, `SLACK_WEBHOOK_URL`) go in `.env` — never committed.
+
+---
+
+## REST API
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/products` | List all monitored products |
+| `POST` | `/api/products` | Add a product `{ "url": "...", "name": "..." }` |
+| `DELETE` | `/api/products/{id}` | Remove a product and its price history |
+| `PATCH` | `/api/products/{id}/toggle` | Toggle active / inactive |
+| `PUT` | `/api/products/{id}` | Update name or URL `{ "url": "...", "name": "..." }` |
+| `GET` | `/api/products/{id}/history` | Price check history as JSON |
+
+**Example response — `GET /api/products/{id}/history`:**
+```json
+[
+  {
+    "id": 42,
+    "price": 45.00,
+    "currency": "USD",
+    "status": "ok",
+    "errorMsg": null,
+    "checkedAt": "2026-04-27T18:10:30"
+  }
+]
+```
 
 ---
 
