@@ -118,6 +118,49 @@ Secrets (`DB_PASSWORD`, `SLACK_WEBHOOK_URL`) go in `.env` — never committed.
 
 ---
 
+## Testing Notifications
+
+To verify the Slack notification works without waiting for a real price drop:
+
+**1. Start Adminer (database UI)**
+
+```bash
+docker compose up adminer -d
+```
+
+Open [http://localhost:8081](http://localhost:8081) and log in:
+
+| Field | Value |
+|---|---|
+| System | PostgreSQL |
+| Server | db |
+| Username | monitor |
+| Password | (your `DB_PASSWORD`) |
+| Database | pricedb |
+
+**2. Insert a higher price for any product**
+
+In Adminer → SQL Command:
+
+```sql
+INSERT INTO price_checks (product_id, price, currency, status, checked_at, created_at, updated_at)
+VALUES (<product_id>, 99.99, 'USD', 'ok', NOW(), NOW(), NOW());
+```
+
+Replace `<product_id>` with the ID from the `products` table.
+
+**3. Shorten the check interval**
+
+In `application.yml`:
+```yaml
+monitor:
+  interval-ms: 30000  # 30 seconds
+```
+
+Restart the app. Within 30 seconds the scheduler will scrape the current price, detect the drop from the inserted price, and send a Slack notification.
+
+---
+
 ## REST API
 
 | Method | Path | Description |
