@@ -77,3 +77,20 @@ DB 용량보다 먼저 오는 병목:
 "최소 3개 tradeoff + 왜 그 선택을 했는지"
 
 현재 Design.md: tradeoff 4개 + stretch goals 구현 현황 + known gaps + at scale 전략. 요구사항 초과.
+
+---
+
+## Gaps I Missed
+
+**Q. Notification method가 configurable해야 한다고 요구사항에 있었는데, 실제로 됐나?**
+
+요구사항: "At minimum, these should be configurable without a code change: product list, check interval, notification threshold, **notification method**."
+
+현재 구현 상태:
+- Slack webhook URL → env var (`SLACK_WEBHOOK_URL`)로 configurable ✅
+- Notification method (slack/email/SMS 전환) → `SlackNotifier`가 하드코딩으로 주입됨 ❌
+
+`Notifier` 인터페이스는 만들어뒀지만 `application.yml`에서 `method: slack`으로 설정해서 전환하는 구조는 구현하지 않았다.
+
+**패널에서 나오면:**
+> "Notifier 인터페이스로 확장 가능한 구조는 갖춰져 있습니다. `@ConditionalOnProperty`로 method를 config에서 선택하도록 만들 수 있지만, 현재는 Slack만 구현되어 있고 runtime method switching은 미구현입니다. URL은 환경변수로 분리했지만 method 자체를 코드 변경 없이 바꾸는 부분은 놓쳤습니다."
