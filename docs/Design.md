@@ -74,6 +74,7 @@ Build a system that monitors a configurable set of Amazon product prices, persis
 
 | # | Goal | Status | Notes |
 |---|---|---|---|
+| 2 | Alert rules engine | ⚠️ Partial | Two configurable thresholds (absolute + percentage) with OR logic. Values are configurable via `application.yml`; the operator (OR/AND) is hardcoded. Extending to AND or adding price ceiling conditions (e.g. "below $50") would require adding `operator` to config and a switch in `PriceChecker`. |
 | 3 | Deployability | ✅ Done | Dockerfile + docker-compose + GitHub Actions CI |
 | 6 | Concurrency correctness | ⚠️ Partial | Intra-instance duplicates prevented via `@Transactional` (read last price + write new check atomically). Cross-instance deduplication not implemented — Redis distributed lock would be required. |
 | 7 | REST export | ✅ Done | `GET /api/products`, `GET /api/products/{id}/history` — contract documented in README |
