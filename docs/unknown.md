@@ -559,3 +559,23 @@ ROLE=worker      # 이 서버는 소비만
 | 소규모 (현재) | `@Scheduled` 단일 인스턴스 |
 | 중간 규모 | 전용 스케줄러 서버 분리 |
 | 대규모 | 메시지 큐 + Worker pool |
+
+---
+
+## Slack Incoming Webhook
+
+**Q. SLACK_WEBHOOK_URL은 왜 "webhook"이야? 우리가 Slack에 요청하는 거 아닌가?**
+
+맞다. 우리가 Slack에 HTTP POST를 보내는 것이다. 이름이 헷갈리는 이유는 Slack의 관점에서 붙인 이름이기 때문이다.
+
+일반적인 Webhook은 "내 서버 URL을 등록해두면 외부 서비스가 나한테 호출해주는 것"이다:
+- GitHub → push 발생 → 내 서버 호출
+- Stripe → 결제 완료 → 내 서버 호출
+
+Slack은 두 방향을 모두 지원한다:
+- **Outgoing Webhook**: Slack → 내 서버 (슬랙에서 명령어 치면 내 서버 호출)
+- **Incoming Webhook**: 내 서버 → Slack ← 우리가 쓰는 것
+
+"Incoming"은 Slack 입장에서 "들어오는 메시지"라는 뜻이다. 우리가 Slack이 제공하는 특수 URL에 POST하면 채널에 메시지가 올라가도록 미리 등록해둔 엔드포인트다.
+
+한 줄 요약: Slack이 외부 서비스의 메시지를 받는 엔드포인트를 "Incoming Webhook"이라 부르는 것. 우리가 HTTP POST를 보내는 게 맞다.

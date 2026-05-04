@@ -22,6 +22,7 @@ Topics covered in `unknown.md` — one line per item.
 | Multi-user extension | Add `users` table, `user_id` FK on products, per-user `user_settings`; dedup scraping by URL |
 | Auth not needed locally | Risk only when publicly exposed; localhost is safe |
 | SLACK_WEBHOOK_URL security | env var is correct without auth; UI input is fine only with auth + HTTPS + masking |
+| Slack Incoming Webhook naming | We POST to Slack — "incoming" is from Slack's perspective (messages coming into Slack from external services) |
 | Dashboard UX gap | All products shown at once; better UX = click product → show its chart |
 | @Retryable spec vs impl | 5xx should retry per spec but was excluded alongside 4xx when fixing the 404 bug |
 | REST plural naming | `/api/products` not `/api/product` — URL represents the collection, not a singleton |
