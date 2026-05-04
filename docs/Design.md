@@ -157,3 +157,4 @@ Guarantees: even if Slack is down or the process crashes mid-send, the `pending`
 | Scheduler | In-process `@Scheduled` | Distributed lock (Redis) or dedicated job service |
 | Storage | Single PostgreSQL | Read replica + time-series partitioning |
 | Notifications | Slack fire-and-forget | Outbox table with retry |
+| Configuration | User settings (threshold, webhook URL) in `application.yml` / env var | Move to DB + UI — distinguish user business settings from infrastructure config |
