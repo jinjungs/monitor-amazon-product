@@ -22,45 +22,57 @@
 ## 2. Architecture & Flow
 
 ```
-[scheduling-1 thread]
-        │
-        │  @Scheduled — fires every 1 hour (sync, single thread)
-        ▼
-PriceMonitorScheduler.runPriceChecks()
-        │
-        │  productRepository.findAllByActiveTrue()
-        │  → for each product: priceMonitorService.checkProduct(product)
-        │    returns immediately (@Async — non-blocking)
-        │
-        ▼
-[price-check-1]  [price-check-2]  [price-check-3]   ← ThreadPoolTaskExecutor
-      │                │                │             (one thread per product,
-      │                │                │              runs concurrently)
-      │
-      │  ── WITHIN EACH THREAD (sequential / synchronous) ──────────────────
-      │
-      ▼
-1. Storage (READ)
-   └─ findLastSuccessfulByProductId()  →  lastPrice
-      │
-      ▼
-2. Scraper
-   └─ jsoup HTTP GET → parse price     →  currentPrice
-      (@Retryable: retry on timeout/5xx, no retry on 4xx/parse/CAPTCHA)
-      │
-      ▼
-3. Storage (WRITE)   @Transactional
-   └─ priceCheckRepository.save()      →  status: ok | error | unavailable
-      │
-      ▼
-4. Checker
-   └─ isSignificantDrop(lastPrice, currentPrice)  →  true / false
-      │
-      ▼
-5. Notifier  (sync call — blocks thread until Slack responds)
-   └─ SlackNotifier.send()  →  HTTP POST to webhook
-      └─ all exceptions caught and swallowed (thread never crashes)
-   ──────────────────────────────────────────────────────────────────────────
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Spring Boot Application                                                │
+│                                                                         │
+│  ┌──────────────────────────────────────────────────┐                  │
+│  │  scheduling-1 thread  (@Scheduled every 1 hour)  │                  │
+│  │                                                  │                  │
+│  │  PriceMonitorScheduler.runPriceChecks()          │                  │
+│  │    └─ for each product:                          │                  │
+│  │         checkProduct(product)  ──────────────────┼──► returns       │
+│  │         (@Async — non-blocking handoff)          │    immediately   │
+│  └──────────────────────────────────────────────────┘                  │
+│                    │ submits tasks                                      │
+│                    ▼                                                    │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │  ThreadPoolTaskExecutor  (concurrent, one thread per product)   │   │
+│  │                                                                 │   │
+│  │  ┌────────────────── price-check-N thread ─────────────────┐   │   │
+│  │  │  (sequential / synchronous inside)                      │   │   │
+│  │  │                                                         │   │   │
+│  │  │  1. Storage READ                                        │   │   │
+│  │  │     └─ findLastSuccessfulByProductId() → lastPrice      │   │   │
+│  │  │                    │                                    │   │   │
+│  │  │                    ▼                                    │   │   │
+│  │  │  2. Scraper  (@Retryable: timeout/5xx only)            │   │   │
+│  │  │     └─ jsoup HTTP GET ──────────────────────────────────┼───┼───┼──► Amazon
+│  │  │        parse price  → currentPrice                     │   │   │
+│  │  │                    │                                    │   │   │
+│  │  │                    ▼                                    │   │   │
+│  │  │  3. Storage WRITE  (@Transactional) ───────────────────┼───┼───┼──► PostgreSQL
+│  │  │     └─ priceCheckRepository.save()                     │   │   │
+│  │  │        status: ok | error | unavailable                │   │   │
+│  │  │                    │                                    │   │   │
+│  │  │                    ▼                                    │   │   │
+│  │  │  4. Checker                                             │   │   │
+│  │  │     └─ isSignificantDrop() → true / false              │   │   │
+│  │  │                    │                                    │   │   │
+│  │  │                    ▼                                    │   │   │
+│  │  │  5. Notifier  (sync — blocks until Slack responds)     │   │   │
+│  │  │     └─ SlackNotifier.send() ───────────────────────────┼───┼───┼──► Slack
+│  │  │        exceptions caught & swallowed                   │   │   │
+│  │  └─────────────────────────────────────────────────────────┘   │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  ┌──────────────────────────────────────────────────┐                  │
+│  │  Tomcat threads  (HTTP requests)                 │                  │
+│  │  └─ GET /products, /dashboard                    │                  │
+│  │  └─ GET /api/products/{id}/history ──────────────┼──► PostgreSQL    │
+│  │  └─ POST/DELETE/PATCH /api/products              │                  │
+│  └──────────────────────────────────────────────────┘                  │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Async boundary:** `@Scheduled` → `checkProduct()` is the only async handoff. Everything inside `checkProduct()` runs sequentially in the same thread.
