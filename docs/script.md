@@ -18,11 +18,11 @@ I intentionally kept the system simple to avoid over-engineering, but if it were
 
 "There are two sides to the system.
 
-On the UI side, there's a product management page where you can add, edit, and toggle products at runtime without restarting the app, and a dashboard that shows price history charts per product.
+On the UI side, there's a product management page where you can add, edit, and toggle products, and a dashboard that shows price history charts per product.
 
-On the backend side, a scheduled job fires every hour, submits one async task per product to a thread pool, and each task runs scrape → store → compare → notify sequentially in its own thread.
+On the backend side, a scheduled job fires every hour, submits one async task per product to a thread pool, and each task runs scrape → store → compare → notify.
 
-Each layer has one responsibility and no knowledge of layers above it — scraper just parses HTML, checker just compares prices against a threshold, notifier just sends a Slack POST."
+Each layer is single-purpose: the scraper parses HTML, the checker compares prices to thresholds, and the notifier sends Slack posts.
 
 ---
 
@@ -30,11 +30,13 @@ Each layer has one responsibility and no knowledge of layers above it — scrape
 
 "I made four main tradeoffs.
 
-First, Java over Python. Python has a stronger scraping ecosystem, but jsoup is fully sufficient here — Amazon renders prices server-side, so there's no JavaScript execution needed. The scraping gap between the two languages is zero for this use case.
+First, Java over Python. Python has a stronger scraping ecosystem, but jsoup is fully sufficient here — Amazon renders prices server-side. The scraping gap between the two languages is zero for this use case.
 
-Second, PostgreSQL over H2. H2 would have been simpler, but it's dev-grade. PostgreSQL adds one Docker service and gives me a defensible answer at any scale. The JPA layer is identical either way.
+Second, I picked PostgreSQL over H2.H2 would have been simpler but not production-grade. With Postgres as a Docker service, I have a defensible, scalable solution, and the JPA layer remains the same in either case.
 
-Third, in-process scheduling over Quartz or Celery. A broker dependency isn't justified for a handful of products on an hourly interval. If the process restarts mid-check, the next tick resumes from DB state within an hour — acceptable for a price monitor.
+Setting up PostgreSQL manually can be complex, but by using Docker, it’s straightforward to compose and run PostgreSQL as a service.
+
+Third, I chose in-process scheduling over something like external batch jobs (e.g., Spring Batch). Since I only have a few products running hourly, a full external batch system wasn’t needed. 
 
 Fourth, Slack webhook over email or SMS. It's free, zero setup, and a reviewer can verify it works in real time."
 
@@ -45,6 +47,10 @@ Fourth, Slack webhook over email or SMS. It's free, zero setup, and a reviewer c
 "There are four things I knowingly left out.
 
 Amazon bot detection — a plain HTTP client is detectable. I handle it gracefully by recording status as unavailable and moving on, but I don't solve it. Proxy rotation would be the real fix.
+(CamelCamelCamel)
+
+**Not mentioned but to add**
+Page structure or price format changed — I handle it gracefully by recording status as unavailable and moving on, but I don't solve it. 
 
 No authentication — this is a single-user tool running locally, so it's not a concern here. Spring Security would be the first addition for a public deployment.
 
@@ -57,6 +63,10 @@ Cross-instance deduplication — within one instance, the DB transaction prevent
 ## 5. Production Scale
 
 "At 10x — say 100 products — PostgreSQL handles it without schema changes. The index on product ID and check time already covers the query patterns. The real bottleneck at 10x isn't storage, it's scraping: Amazon will start blocking an IP that hits it dozens of times an hour from the same address.
+
+PostgreSQL itself has virtually no capacity ceiling — tables up to 32TB, databases unlimited. The real concern is **performance degradation at scale**.
+
+**Read load** — with millions of rows, dashboard queries slow down. A read replica separates reads from writes and is the natural first fix.
 
 At 100x, I'd look at read replicas for the dashboard queries, monthly partitioning or TimescaleDB for the price history table, and a distributed lock or dedicated job service to replace the in-process scheduler."
 
@@ -83,3 +93,29 @@ First, I'd keep CLAUDE.md updated with key constraints as I made decisions — n
 Second, I'd write tests alongside each implementation block, not at the end. Tests force you to define expected behavior precisely, which is exactly where the requirement gaps were hiding.
 
 Third, I'd write integration tests for the full flow — scrape to notification — using mocks, not manual DB manipulation. That's the only way to verify the end-to-end behavior automatically."
+
+
+---
+
+## 8. My Questions to Interviewer
+
+1. First, what do you think is the best way to quickly build domain knowledge in the legal tech space? 
+
+2. Second, are there any specific courses or certifications you’d recommend for someone wanting to deepen that understanding?
+
+- onboarding videos
+- documention at confluence
+- coding agent
+- notebookLM
+
+3. Since this is a fully remote role, I’m curious about how the team stays connected day-to-day. How do you ensure strong communication and collaboration in a remote setup? 
+
+4. And could you share how frequently meetings or check-ins typically occur?
+
+- slack / zoom calls
+- daliy standup, weekly meeting
+- cooperative team / interconnected / help each other / respectful culture
+
+**Growth Pipeline**
+In my initial conversation with Levi, the phrase 'growth pipeline' really resonated with me. I’d love to be part of that journey and contribute to both the team’s growth and my own.
+
