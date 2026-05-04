@@ -28,7 +28,7 @@ When working on these topics, update `docs/unknown.md` with Q&A and check off in
 - [ ] **Quartz / External Queue** — how does it compare to `@Scheduled`? Is Spring Batch relevant here?
 
 ### To Prepare (scripts & practice)
-- [ ] Explanation practice: project → architecture → implementation
+- [x] Explanation practice: project → architecture → implementation
 - [ ] Script: project intro (short, memorizable)
 - [ ] Script: architecture & stack choices
 - [ ] Script: tradeoffs & known gaps (Design.md)
@@ -42,5 +42,4 @@ When working on these topics, update `docs/unknown.md` with Q&A and check off in
 ## Key Constraints (do not violate when editing code)
 
 - All documents and output must be in English — no Korean
-- `docs/unknown.md` and `docs/unknown-summary.md` are local only — do not push to remote
-- interview prep commits: local only, do not push
+- **Do NOT push to remote unless explicitly told to.** Commit locally only until instructed.
