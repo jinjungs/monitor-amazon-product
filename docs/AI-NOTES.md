@@ -1,6 +1,6 @@
 # AI-NOTES
 
-Total issues caught: 6
+Total issues caught: 5 (3 has sub-issues 3-1, 3-2)
 
 ---
 
@@ -64,7 +64,7 @@ An alternative would be `ON DELETE CASCADE` on the FK at the schema level, but e
 
 ---
 
-## #3 — 4xx HTTP errors being retried unnecessarily
+## #3-1 — 4xx HTTP errors being retried unnecessarily
 
 ### What Claude did
 
@@ -86,11 +86,11 @@ Add `HttpStatusException.class` to `noRetryFor` so all HTTP status errors bypass
 noRetryFor = {PriceParseException.class, CaptchaException.class, HttpStatusException.class}
 ```
 
-> ⚠️ **Important — follow-up issue from this fix:** See #6 below.
+> ⚠️ **Important — follow-up issue from this fix:** See #3-2 below.
 
 ---
 
-## #6 — @Retryable excluded 5xx despite spec explicitly allowing it
+## #3-2 — @Retryable excluded 5xx despite spec explicitly allowing it
 
 ### What Claude did
 
