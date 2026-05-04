@@ -70,6 +70,22 @@ Build a system that monitors a configurable set of Amazon product prices, persis
 
 ---
 
+## Core Requirements Implemented
+
+| # | Requirement | Status | Notes |
+|---|---|---|---|
+| 1 | Monitor multiple products | ✅ Done | Product list managed via UI, persisted in DB — no restart required to add/remove |
+| 2 | Periodic price checks | ✅ Done | `@Scheduled` every 1 hour (configurable). `ThreadPoolTaskExecutor` runs one task per product concurrently |
+| 3 | Durable price history | ✅ Done | Every check persisted to PostgreSQL `price_checks` table. Survives process restart. |
+| 4 | Price-drop detection and notification | ✅ Done | Absolute OR percentage threshold. Slack webhook notification. |
+| 5 | Price history visualization | ✅ Done | Thymeleaf + Chart.js dashboard at `GET /dashboard` |
+| 6 | Configurable parameters | ⚠️ Partial | Interval, threshold, thread-pool configurable via `application.yml`. Slack webhook URL via env var. Notification **method** (slack/email) is hardcoded — not runtime-switchable without code change. |
+| 7 | Logging and observability | ✅ Done | SLF4J + Logback + logstash-logback-encoder. Structured JSON logs per price check and notification event. |
+| 8 | Failure handling | ✅ Done | Per-product isolation, `@Retryable` on transient errors only, CAPTCHA/parse failures recorded as `unavailable`, notification failures logged and swallowed. |
+| 9 | Tests | ✅ Done | 15 tests across 4 layers: scraper (HTML fixture), storage (`@DataJpaTest`), checker (unit), notifier (WireMock). |
+
+---
+
 ## Stretch Goals Implemented
 
 | # | Goal | Status | Notes |
