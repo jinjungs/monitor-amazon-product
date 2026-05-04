@@ -80,6 +80,62 @@ DB 용량보다 먼저 오는 병목:
 
 ---
 
+## Spring Configuration
+
+**Q. @Value와 @ConfigurationProperties의 차이는?**
+
+- `@Value` — 값 하나를 단일 필드에 주입. 단순한 곳에 적합.
+- `@ConfigurationProperties` — `application.yml`의 관련 설정들을 객체에 묶어서 바인딩. 여러 설정값이 필요한 곳에서 객체 하나를 주입받아 재사용 가능.
+
+`application.yml`에 값이 있으면 그 값을 사용하고, 없으면 Java 필드의 default 값을 사용한다.
+
+예: `MonitorProperties`를 만들면 `SchedulerConfig`, `PriceChecker`, `SlackNotifier` 등 여러 곳에서 객체 하나를 주입받아 `intervalMs`, `threshold`, `slack.webhookUrl` 등을 꺼내 쓸 수 있다.
+
+---
+
+**Q. @Scheduled에서는 왜 MonitorProperties를 못 쓰고 SpEL을 쓰나?**
+
+Java 언어 제약 때문이다. Annotation 속성에는 **컴파일 타임 상수**만 들어갈 수 있다.
+
+```java
+// 컴파일 에러 — 메서드 호출 불가
+@Scheduled(fixedRate = monitorProperties.getIntervalMs())
+
+// OK — String 리터럴, Spring이 런타임에 해석
+@Scheduled(fixedRateString = "${monitor.interval-ms}")
+```
+
+빈이 이미 만들어져 있는지 여부와 무관하게, Java 컴파일러가 annotation을 파싱하는 시점에 값이 코드에 리터럴로 박혀있어야 한다. Spring이 런타임에 `"${monitor.interval-ms}"` 문자열을 `application.yml` 값으로 치환하는 방식으로 우회한다.
+
+---
+
+**Q. 왜 MySQL이 아니라 PostgreSQL인가?**
+
+이 프로젝트 규모에서 MySQL이나 PostgreSQL이나 성능 차이는 없다. PostgreSQL을 선택한 실질적 이유:
+
+1. **TimescaleDB 확장 경로** — 100x scale 옵션으로 TimescaleDB를 언급했는데, PostgreSQL extension이라 MySQL로는 같은 경로로 확장 불가
+2. **Spring Boot 생태계 표준** — Spring Boot + JPA 조합에서 사실상 기본 선택
+3. **표준 SQL 준수도** — PostgreSQL이 MySQL보다 높음
+
+---
+
+**Q. TimescaleDB가 뭔가?**
+
+PostgreSQL의 확장(extension)으로, 시계열 데이터를 효율적으로 저장하고 조회하기 위해 만들어진 DB.
+
+시계열 데이터 = 시간 순서대로 쌓이는 데이터. 이 프로젝트의 `price_checks`가 딱 그 형태.
+
+| | PostgreSQL | TimescaleDB |
+|---|---|---|
+| 저장 방식 | 단순 테이블 | 시간 기준 자동 파티셔닝 (Hypertable) |
+| 오래된 데이터 압축 | 수동 | 자동 |
+| 시계열 쿼리 속도 | 인덱스로 커버 | 훨씬 빠름 |
+| 설치 | 기본 | `CREATE EXTENSION timescaledb` |
+
+이 프로젝트 규모 (10개 상품, 시간당 1회) 는 일반 PostgreSQL + 인덱스로 충분. 1,000개 상품 × 분당 체크 수준이 되면 `price_checks`에 수억 rows가 쌓이고 그때 의미 있어진다.
+
+---
+
 ## Gaps I Missed
 
 **Q. Notification method가 configurable해야 한다고 요구사항에 있었는데, 실제로 됐나?**
