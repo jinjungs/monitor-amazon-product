@@ -1,6 +1,6 @@
 # AI-NOTES
 
-Total issues caught: 5
+Total issues caught: 6
 
 ---
 
@@ -151,5 +151,41 @@ throw new BusinessException("Product with this URL is already being monitored.")
 @ExceptionHandler(BusinessException.class)
 public ResponseEntity<String> handle(BusinessException e) {
     return ResponseEntity.status(409).body(e.getMessage());
+}
+```
+
+---
+
+## #6 — @Retryable excluded 5xx despite spec explicitly allowing it
+
+### What Claude did
+
+When fixing the 404 retry bug (issue #3), Claude added `HttpStatusException` to `noRetryFor`. This class covers both 4xx and 5xx responses, so both were excluded from retry.
+
+### Why it was wrong
+
+`clarify-requirements.md` explicitly specified:
+
+| Failure | Retry? |
+|---|---|
+| 5xx server error | ✅ — transient, worth retrying |
+| 4xx client error | ❌ — retrying won't change the outcome |
+
+Claude fixed the 4xx problem but silently broke the 5xx behavior in the same change, without checking the spec.
+
+### How it was caught
+
+During interview prep, reviewing the actual `@Retryable` annotation revealed the discrepancy with the requirements doc.
+
+### The fix
+
+Catch `HttpStatusException` inside the scrape method and re-throw as `IOException` only for 5xx, letting 4xx propagate as-is:
+
+```java
+catch (HttpStatusException e) {
+    if (e.getStatusCode() >= 500) {
+        throw new IOException("5xx: " + e.getStatusCode()); // retry
+    }
+    throw e; // 4xx — no retry
 }
 ```
