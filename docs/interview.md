@@ -2,6 +2,27 @@
 
 ---
 
+## Useful Phrases
+
+**모를 때 솔직하게:**
+- "I'm not entirely sure about that, but my understanding is..."
+- "I don't have a strong opinion on that specific topic."
+- "That's a good question — I haven't explored that deeply."
+
+**아는 범위를 명확히 할 때:**
+- "I'm familiar with the concept, but I haven't used it in practice."
+- "I know the basics, but I'd want to dig deeper before making a firm statement."
+- "I've seen this discussed, but I don't have hands-on experience with it."
+
+**생각해보겠다는 표현:**
+- "Let me think about that for a moment."
+- "I'm not confident enough to give you a definitive answer on that."
+
+**가장 자연스러운 조합:**
+> "That's something I'm not deeply familiar with. From what I understand, [아는 만큼]. But I'd want to look into it more carefully before drawing a conclusion."
+
+---
+
 ## Retrospective
 
 AI-assisted development로 진행하면서 최대한 각 단계를 작게 나누고, AI가 생성한 코드를 완벽히 이해하고 넘어가려고 했다. 그럼에도 불구하고 놓치는 부분들이 생겼다:
