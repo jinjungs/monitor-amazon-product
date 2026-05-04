@@ -6,9 +6,9 @@
 
 "I built an Amazon price monitor system that tracks a configurable set of products, persists every price check, and sends notifications when a meaningful price drop is detected.
 
-The stack is Java with Spring Boot — which the requirements preferred, and I'm most comfortable there. Spring Boot gave me everything I needed out of the box: `@Scheduled` for periodic checks, JPA for persistence, and Spring Retry for resilient scraping. PostgreSQL via Docker for storage, and a Slack webhook for notifications.
+The stack is Java with Spring Boot — which the requirements preferred, and I'm most comfortable there. Spring Boot gave me everything I needed out of the box: `@Scheduled` for periodic checks, JPA for persistence, and Spring Retry for resilient scraping. I chose PostgreSQL via Docker for storage, and a Slack webhook for notifications.
 
-The part I found most interesting was thinking through where the system could break, and making deliberate decisions about what to handle versus what to leave out. 
+The most interesting part was thinking through where the system could break, and making deliberate decisions about what to handle versus what to leave out. 
 
 I intentionally kept the system simple to avoid over-engineering, but if it were to scale to multiple users or servers, I would revisit those trade-offs and introduce more robust solutions."
 
@@ -16,11 +16,13 @@ I intentionally kept the system simple to avoid over-engineering, but if it were
 
 ## 2. Architecture & Implementation
 
-"The core flow is: a scheduled job fires every hour, submits one async task per product to a thread pool, and each task runs scrape → store → compare → notify sequentially in its own thread.
+"There are two sides to the system.
 
-Each layer has one responsibility and no knowledge of layers above it — scraper just parses HTML, checker just compares prices against a threshold, notifier just sends a Slack POST.
+On the UI side, there's a product management page where you can add, edit, and toggle products at runtime without restarting the app, and a dashboard that shows price history charts per product.
 
-The async boundary is only at the scheduler handoff. Everything inside a product's thread is synchronous. That was a deliberate choice — it keeps the flow easy to trace and reason about."
+On the backend side, a scheduled job fires every hour, submits one async task per product to a thread pool, and each task runs scrape → store → compare → notify sequentially in its own thread.
+
+Each layer has one responsibility and no knowledge of layers above it — scraper just parses HTML, checker just compares prices against a threshold, notifier just sends a Slack POST."
 
 ---
 
