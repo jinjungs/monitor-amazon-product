@@ -22,33 +22,52 @@
 ## 2. Architecture & Flow
 
 ```
-[application.yml]
-  interval, threshold, thread-pool, slack webhook URL
+[scheduling-1 thread]
+        │
+        │  @Scheduled — fires every 1 hour (sync, single thread)
+        ▼
+PriceMonitorScheduler.runPriceChecks()
+        │
+        │  productRepository.findAllByActiveTrue()
+        │  → for each product: priceMonitorService.checkProduct(product)
+        │    returns immediately (@Async — non-blocking)
         │
         ▼
-[@Scheduled job — fires every 1 hour]
-        │
-        │  submits one task per active product
-        ▼
-[ThreadPoolTaskExecutor]
-   │        │        │
-   ▼        ▼        ▼
-[Scraper]  [Scraper]  [Scraper]     ← jsoup, per-product isolation
-   │
-   ▼
-[Storage]  ── write price_checks row (status: ok / error / unavailable)
-   │       ── read last status='ok' price for this product
-   │
-   ▼
-[Checker]  ── (current price, last price, threshold) → notify? true/false
-   │
-   ▼
-[Notifier] ── HTTP POST to Slack webhook
+[price-check-1]  [price-check-2]  [price-check-3]   ← ThreadPoolTaskExecutor
+      │                │                │             (one thread per product,
+      │                │                │              runs concurrently)
+      │
+      │  ── WITHIN EACH THREAD (sequential / synchronous) ──────────────────
+      │
+      ▼
+1. Storage (READ)
+   └─ findLastSuccessfulByProductId()  →  lastPrice
+      │
+      ▼
+2. Scraper
+   └─ jsoup HTTP GET → parse price     →  currentPrice
+      (@Retryable: retry on timeout/5xx, no retry on 4xx/parse/CAPTCHA)
+      │
+      ▼
+3. Storage (WRITE)   @Transactional
+   └─ priceCheckRepository.save()      →  status: ok | error | unavailable
+      │
+      ▼
+4. Checker
+   └─ isSignificantDrop(lastPrice, currentPrice)  →  true / false
+      │
+      ▼
+5. Notifier  (sync call — blocks thread until Slack responds)
+   └─ SlackNotifier.send()  →  HTTP POST to webhook
+      └─ all exceptions caught and swallowed (thread never crashes)
+   ──────────────────────────────────────────────────────────────────────────
 ```
 
-**Each layer has one responsibility and no knowledge of layers above it.**
+**Async boundary:** `@Scheduled` → `checkProduct()` is the only async handoff. Everything inside `checkProduct()` runs sequentially in the same thread.
 
-One scraper failure does not block others — each product runs in its own thread. Failures are recorded as `status='error'` and retried on the next tick naturally.
+**Failure isolation:** one product's thread crashing does not affect others. Each product runs independently in `ThreadPoolTaskExecutor`.
+
+**Known design gap:** `@Transactional` wraps the entire `checkProduct()` including `notifier.send()`. If the notifier threw an unchecked exception, the `price_check` save would roll back. Currently safe because `SlackNotifier` catches all exceptions — but storing and notifying should ideally be in separate transaction boundaries.
 
 ### Database Schema
 
