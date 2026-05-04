@@ -116,6 +116,22 @@ void sendsNotificationWhenPriceDrop() {
 
 ---
 
+**CLAUDE.md를 제대로 관리하지 않은 것도 원인이다:**
+
+중요한 결정들을 대화 context로만 주고 CLAUDE.md에 업데이트하지 않았다. 대화 context는 해당 세션에서만 유효하지만 CLAUDE.md는 모든 세션에서 항상 로드된다.
+
+예를 들어 5xx retry spec이 CLAUDE.md에 있었다면:
+```markdown
+## Retry Policy
+- Network timeout, 5xx: retry (transient)
+- 4xx, PriceParseException, CaptchaException: no retry
+```
+404 수정 시 Claude가 이 제약을 보고 5xx는 유지했을 것이다.
+
+**다음에 보완할 방법:** 중요한 아키텍처 결정과 제약사항은 대화로만 끝내지 말고 CLAUDE.md에 명시적으로 기록한다. "이 결정은 왜 이렇게 했는가"가 아니라 "앞으로 이렇게 구현해야 한다"는 제약으로 남겨두는 것이 핵심이다.
+
+---
+
 **개발 순서도 바꾸고 싶다:**
 
 이번엔 전체 구현을 먼저 다 하고 마지막에 테스트를 몰아서 작성했다. 다음엔 하나의 레이어(토픽)를 구현하면 바로 테스트를 작성하고 검증한 뒤 다음으로 넘어가고 싶다.
