@@ -191,3 +191,33 @@ public ResponseEntity<String> handle(BusinessException e) {
     return ResponseEntity.status(409).body(e.getMessage());
 }
 ```
+
+---
+
+## Summary
+
+Issues fall into two distinct categories:
+
+### Category A — Underspecified requirements (my side)
+
+Claude implemented correctly given what was asked, but I didn't specify the full requirement. Claude should have flagged these proactively.
+
+| # | Issue |
+|---|---|
+| #1 | No initial price fetch on registration — requirement never stated, but obvious UX gap |
+| #3-2 | 5xx excluded from retry — spec existed in clarify-requirements.md but Claude didn't cross-check when making the fix |
+
+### Category B — Actual implementation errors (Claude's side)
+
+Bugs or weak design choices that Claude produced regardless of specification.
+
+| # | Issue |
+|---|---|
+| #2 | FK constraint on delete — Claude wrote the schema with the FK but didn't handle the delete consequence |
+| #3-1 | 4xx being retried — `HttpStatusException` extends `IOException`, Claude missed the inheritance |
+| #4 | Thymeleaf 3.1 String in `th:onclick` — runtime error from version-specific security restriction |
+| #5 | Missing `BusinessException` abstraction — working but unscalable design, required human nudge to generalize |
+
+### Key takeaway
+
+Category A gaps shrink when requirements are more explicit and CLAUDE.md is kept up to date with constraints. Category B gaps shrink when each implementation block is followed immediately by tests — bugs surface before they compound.
