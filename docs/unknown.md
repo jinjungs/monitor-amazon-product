@@ -491,3 +491,71 @@ catch (HttpStatusException e) {
 
 **패널에서 나오면:**
 > "Notifier 인터페이스로 확장 가능한 구조는 갖춰져 있습니다. `@ConditionalOnProperty`로 method를 config에서 선택하도록 만들 수 있지만, 현재는 Slack만 구현되어 있고 runtime method switching은 미구현입니다. URL은 환경변수로 분리했지만 method 자체를 코드 변경 없이 바꾸는 부분은 놓쳤습니다."
+
+---
+
+## Scaling & Concurrency
+
+**Q. 싱글 인스턴스에서 @Transactional이 중복 알림을 방지하나?**
+
+`@Transactional`이 중복을 막는다기보다, 애초에 같은 상품을 두 thread가 처리하는 구조가 아니다.
+
+`products.forEach(priceMonitorService::checkProduct)` — 상품마다 한 번씩만 호출. product A → thread 1, product B → thread 2. 같은 상품이 두 thread에 배정되지 않는다.
+
+`@Transactional`이 실제로 보장하는 것은 **원자성** — findLastSuccessfulByProductId() + save()가 하나의 트랜잭션으로 묶여 중간에 죽으면 롤백된다.
+
+멀티 인스턴스에서는 `@Transactional`만으로 중복을 막을 수 없다.
+
+---
+
+**Q. 멀티 서버 환경에서 중복 처리를 막는 방법은?**
+
+**Option 1 — Redis 분산 락:**
+각 상품 체크 전에 Redis에 락을 획득. 하나의 서버만 락을 가질 수 있어 중복 불가. TTL 설정으로 서버가 죽어도 락이 자동 해제된다.
+
+**Option 2 — 전용 스케줄러 서버:**
+스케줄링을 담당하는 서버를 하나만 두고 나머지 서버는 HTTP 요청만 처리. 설정 하나로 해결 (`@ConditionalOnProperty`). 단, 스케줄러 서버가 죽으면 체크가 중단되는 단일 장애점이 생긴다.
+
+**Option 3 — 메시지 큐 (근본적 해결책):**
+상품 수가 많아져서 스케줄러 서버도 여러 대가 필요해지면 결국 같은 문제로 돌아온다. 근본 해결은 "모든 서버가 전부 체크" → "작업을 나눠서 처리"로 전환.
+
+```
+Scheduler → [Queue] ← Worker 1
+                    ← Worker 2
+                    ← Worker 3
+```
+
+Scheduler는 상품당 메시지 하나를 발행만 하고, Worker들이 큐에서 가져가서 처리. 큐가 각 메시지를 하나의 Worker에게만 전달하므로 중복이 구조적으로 불가능.
+
+---
+
+**Q. 메시지 큐 도입 시 어디서부터 바꾸나?**
+
+`checkProduct()` 단위가 자연스러운 분리점이다.
+
+```java
+// Scheduler (Publisher) — 메시지 발행만
+products.forEach(p -> messageQueue.publish("price-check", p.getId()));
+
+// Worker (Consumer) — 메시지 소비 + 기존 로직 그대로
+@MessageListener("price-check")
+public void handlePriceCheck(Long productId) {
+    priceMonitorService.checkProduct(product);  // 변경 없음
+}
+```
+
+같은 JAR를 환경변수로 역할 분리:
+```bash
+ROLE=scheduler   # 이 서버는 발행만
+ROLE=worker      # 이 서버는 소비만
+```
+
+`checkProduct()` 내부 로직은 전혀 바꿀 필요 없다. 레이어 분리가 잘 되어 있어서 Scheduler만 교체하면 된다.
+
+**스케일 진화 경로:**
+
+| 규모 | 방식 |
+|---|---|
+| 소규모 (현재) | `@Scheduled` 단일 인스턴스 |
+| 중간 규모 | 전용 스케줄러 서버 분리 |
+| 대규모 | 메시지 큐 + Worker pool |

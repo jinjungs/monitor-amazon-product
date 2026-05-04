@@ -29,6 +29,10 @@ Topics covered in `unknown.md` — one line per item.
 | Useful phrases | Phrases for "I don't know" in English |
 | Retrospective | Underspecified requirements + CLAUDE.md not maintained + test-last approach = gaps |
 | Production config separation | User business settings (threshold, webhook) → DB + UI; infra settings stay in config file |
+| Concurrency — single instance | @Transactional guarantees atomicity, not dedup; same product never assigned to two threads in one tick |
+| Concurrency — multi instance | Redis lock, dedicated scheduler server, or message queue depending on scale |
+| Message queue architecture | Scheduler publishes per-product messages; Workers consume and call checkProduct(); same JAR, different ROLE env var |
+| Quartz vs @Scheduled vs Spring Batch | @Scheduled = simple timer; Quartz = persistent + clustered scheduler; Spring Batch = chunk-based data processing, not a scheduler |
 
 ---
 
@@ -37,8 +41,6 @@ Topics covered in `unknown.md` — one line per item.
 | Topic | Notes |
 |---|---|
 | Test strategy — how tests were built | Walk through each layer's test and why |
-| Concurrency correctness | Single instance — does `@Transactional` actually guarantee no duplicates? |
-| Quartz / External Queue vs `@Scheduled` | Spring Batch also relevant here? |
 
 ---
 
