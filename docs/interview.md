@@ -2,6 +2,56 @@
 
 ---
 
+## Multi-User Extension
+
+**Q. 여러 유저를 지원하려면 무엇을 바꿔야 하나?**
+
+**스키마 변경:**
+
+```sql
+-- users 테이블
+CREATE TABLE users (
+    id         BIGSERIAL PRIMARY KEY,
+    email      TEXT UNIQUE NOT NULL,
+    password   TEXT NOT NULL,  -- bcrypt hashed
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- products에 user_id 추가 (상품이 유저에 종속)
+ALTER TABLE products ADD COLUMN user_id BIGINT REFERENCES users(id);
+
+-- 유저별 알림 설정 (webhook URL, threshold를 유저마다 다르게)
+CREATE TABLE user_settings (
+    user_id        BIGINT PRIMARY KEY REFERENCES users(id),
+    slack_webhook  TEXT,
+    threshold_abs  NUMERIC DEFAULT 1.00,
+    threshold_pct  NUMERIC DEFAULT 2.0
+);
+```
+
+**그 외 바꿔야 할 것들:**
+
+| 항목 | 현재 | 멀티 유저 |
+|---|---|---|
+| 인증 | 없음 | Spring Security + 로그인 |
+| 상품 조회 | 전체 조회 | 로그인한 유저 소유 상품만 |
+| 대시보드 | 전체 표시 | 본인 상품만 |
+| Slack webhook | 전역 env var | 유저별 DB 저장 |
+| Threshold | 전역 config | 유저별 DB 저장 |
+| 스케줄러 | 전체 active 상품 체크 | 동일하지만 알림 전송 시 유저별 설정 사용 |
+
+**흥미로운 설계 질문 — 중복 스크래핑:**
+
+유저 A와 유저 B가 같은 Amazon URL을 모니터링하면 스크래핑을 두 번 해야 할까?
+
+- **심플한 방식:** 유저마다 독립 스크래핑 — 현재 구조 유지, 중복 발생
+- **효율적인 방식:** URL 기준으로 스크래핑 deduplicate → 결과를 여러 유저에게 fan-out
+
+fan-out 방식이면 `price_checks`는 URL 단위로 공유하고, 알림은 해당 URL을 구독 중인 유저들에게 각각 전송하는 구조가 된다.
+
+---
+
 ## Useful Phrases
 
 **모를 때 솔직하게:**
