@@ -106,6 +106,47 @@ Build a system that monitors a configurable set of Amazon product prices, persis
 | No notification retry | Fire-and-forget is acceptable for hourly monitoring. Outbox pattern is the production solution |
 | Cross-instance duplicate notifications | Single-instance deployment assumed. `@Transactional` prevents duplicates within one instance. Redis distributed lock would be needed for multi-instance |
 
+### If Outbox Pattern were implemented
+
+**Current (fire-and-forget):**
+```
+┌─────────────────────────────────────────┐
+│  price-check thread  (@Transactional)   │
+│                                         │
+│  1. price_checks.save()  ──────────────►│ PostgreSQL
+│  2. SlackNotifier.send() ──────────────►│ Slack  ← if this fails,
+│                                         │          notification is lost
+└─────────────────────────────────────────┘
+```
+
+**With Outbox Pattern:**
+```
+┌─────────────────────────────────────────┐
+│  price-check thread  (@Transactional)   │
+│                                         │
+│  1. price_checks.save()        ────────►│
+│  2. notifications.save()       ────────►│ PostgreSQL
+│     (status = 'pending')                │  (atomic — both or neither)
+└─────────────────────────────────────────┘
+                                          │
+                    ┌─────────────────────┘
+                    │  separate poller (every N seconds)
+                    ▼
+┌─────────────────────────────────────────┐
+│  OutboxProcessor                        │
+│                                         │
+│  SELECT * FROM notifications            │
+│  WHERE status = 'pending'  ────────────►│ PostgreSQL
+│                                         │
+│  SlackNotifier.send()      ────────────►│ Slack
+│                                         │
+│  UPDATE status = 'sent'    ────────────►│ PostgreSQL
+│  (or 'failed' → retry)                 │
+└─────────────────────────────────────────┘
+```
+
+Guarantees: even if Slack is down or the process crashes mid-send, the `pending` record survives and is retried on next poll.
+
 ---
 
 ## What I Would Change at Production Scale
