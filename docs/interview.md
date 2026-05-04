@@ -36,6 +36,36 @@ AI-assisted development로 진행하면서 최대한 각 단계를 작게 나누
 
 **다음에 보완할 방법:** 구현 전에 테스트 시나리오를 먼저 작성하는 것. 테스트를 먼저 작성하다 보면 "이 케이스에서 어떻게 동작해야 하는가"를 자연스럽게 구체화하게 되고, 그 과정에서 AI에게 넘기기 전에 요구사항의 빈틈이 드러난다. 코드를 검증하는 것뿐 아니라 요구사항을 명확히 하는 도구로써 테스트를 활용하는 것이다.
 
+**통합 테스트 전략도 개선하고 싶다:**
+
+이번엔 가격 drop 알림을 검증하기 위해 DB 데이터를 직접 조작했다. 실제 운영에서는 이렇게 하면 안 된다. 재현이 어렵고, 자동화가 안 되고, 사람이 개입해야 한다.
+
+올바른 방법은 Scraper를 mock해서 원하는 가격을 반환하게 하고, DB에 이전 가격을 seed한 뒤, 전체 흐름(`checkProduct()`)을 실행해서 Slack 알림이 갔는지 WireMock으로 검증하는 integration test다:
+
+```java
+@Test
+void sendsNotificationWhenPriceDrop() {
+    // 1. DB에 이전 가격 seed
+    priceCheckRepository.save(PriceCheck(product, price=50.00, status="ok"));
+
+    // 2. Scraper mock — 현재 가격 $45 반환
+    when(scraper.scrape(any())).thenReturn(ScrapeResult(price=45.00));
+
+    // 3. Slack WireMock 준비
+    wireMock.stubFor(post("/slack").willReturn(ok()));
+
+    // 4. 전체 흐름 실행
+    priceMonitorService.checkProduct(product);
+
+    // 5. 알림이 갔는지 검증
+    wireMock.verify(postRequestedFor(urlEqualTo("/slack")));
+}
+```
+
+이렇게 하면 DB 조작 없이 재현 가능하고 자동화된 방식으로 전체 흐름을 검증할 수 있다.
+
+---
+
 **개발 순서도 바꾸고 싶다:**
 
 이번엔 전체 구현을 먼저 다 하고 마지막에 테스트를 몰아서 작성했다. 다음엔 하나의 레이어(토픽)를 구현하면 바로 테스트를 작성하고 검증한 뒤 다음으로 넘어가고 싶다.
